@@ -12,7 +12,6 @@ pub enum InputEvent {
     AlwaysOnTop,
     Fullscreen,
     InfoMode,
-    EditMode,
     NextImage,
     FirstImage,
     LastImage,
@@ -37,8 +36,6 @@ pub enum InputEvent {
     PanUp,
     PanDown,
     DeleteFile,
-    LosslessRotateRight,
-    LosslessRotateLeft,
     Copy,
     Paste,
     Browse,
@@ -108,7 +105,6 @@ impl ShortcutExt for Shortcuts {
             .add_key(InputEvent::ResetView, "V")
             .add_key(InputEvent::Quit, "Q")
             .add_key(InputEvent::InfoMode, "I")
-            .add_key(InputEvent::EditMode, "E")
             .add_key(InputEvent::RedChannel, "R")
             .add_key(InputEvent::GreenChannel, "G")
             .add_key(InputEvent::BlueChannel, "B")
@@ -127,8 +123,6 @@ impl ShortcutExt for Shortcuts {
             .add_key(InputEvent::ZoomThree, "Key3")
             .add_key(InputEvent::ZoomFour, "Key4")
             .add_key(InputEvent::ZoomFive, "Key5")
-            .add_key(InputEvent::LosslessRotateLeft, "LBracket")
-            .add_key(InputEvent::LosslessRotateRight, "RBracket")
             .add_key(InputEvent::ZenMode, "Z")
             .add_key(InputEvent::DeleteFile, "Delete")
             // .add_key(InputEvent::Browse, "F1") // FIXME: As Shortcuts is a HashMap, only the newer key-sequence will be registered
@@ -180,7 +174,7 @@ pub fn key_pressed(app: &mut App, state: &mut OculanteState, command: InputEvent
     // early out if just one key is pressed, and it's a modifier
     if app.keyboard.alt() || app.keyboard.shift() || app.keyboard.ctrl() {
         if app.keyboard.down.len() == 1 {
-            debug!("just modifier down");
+            // debug!("just modifier down");
             return false;
         }
     }

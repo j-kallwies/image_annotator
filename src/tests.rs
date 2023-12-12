@@ -1,10 +1,7 @@
 use crate::image_loader::*;
 use cmd_lib::run_cmd;
 
-use crate::{
-    image_editing::{process_pixels, ImageOperation, ScaleFilter},
-    shortcuts::{keypresses_as_markdown, ShortcutExt, Shortcuts},
-};
+use crate::shortcuts::{keypresses_as_markdown, ShortcutExt, Shortcuts};
 
 use super::*;
 use std::{fs::File, io::Write, path::PathBuf, time::Instant};

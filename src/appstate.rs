@@ -1,10 +1,10 @@
 use crate::{
-    image_editing::EditState,
     scrubber::Scrubber,
     settings::PersistentSettings,
     utils::{ExtendedImageInfo, Frame, Player},
 };
 use image::RgbaImage;
+use lexical_sort::iter;
 use nalgebra::Vector2;
 use notan::{egui::epaint::ahash::HashMap, prelude::Texture, AppState};
 use std::{
@@ -41,6 +41,227 @@ impl Message {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct AnnoationBoundingBox {
+    x_min: f32,
+    x_max: f32,
+    y_min: f32,
+    y_max: f32,
+}
+
+impl Default for AnnoationBoundingBox {
+    fn default() -> AnnoationBoundingBox {
+        AnnoationBoundingBox {
+            x_min: f32::NAN,
+            x_max: f32::NAN,
+            y_min: f32::NAN,
+            y_max: f32::NAN,
+        }
+    }
+}
+
+impl AnnoationBoundingBox {
+    pub fn tl_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(self.x_min, self.y_min)
+    }
+
+    pub fn tr_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(self.x_max, self.y_min)
+    }
+
+    pub fn lr_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(self.x_max, self.y_max)
+    }
+
+    pub fn ll_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(self.x_min, self.y_max)
+    }
+
+    pub fn center(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(
+            (self.x_min + self.x_max) / 2.0,
+            (self.y_min + self.y_max) / 2.0,
+        )
+    }
+
+    pub fn size(self) -> (f32, f32) {
+        (self.x_max - self.x_min, self.y_max - self.y_min)
+    }
+
+    pub fn contains(self, p: (f32, f32)) -> bool {
+        p.0 >= self.x_min && p.0 <= self.x_max && p.1 >= self.y_min && p.1 <= self.y_max
+    }
+
+    fn set(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {
+        self.x_min = f32::min(p1.x, p2.x);
+        self.x_max = f32::max(p1.x, p2.x);
+        self.y_min = f32::min(p1.y, p2.y);
+        self.y_max = f32::max(p1.y, p2.y);
+    }
+
+    fn get_part(self: &Self, cursor_position: Vector2<f32>) -> Option<BoundingBoxPart> {
+        let catch_radius = 20.0;
+        if (self.tl_corner() - cursor_position).norm() < catch_radius {
+            Some(BoundingBoxPart::CornerUpperLeft)
+        } else if (self.tr_corner() - cursor_position).norm() < catch_radius {
+            Some(BoundingBoxPart::CornerUpperRight)
+        } else if (self.ll_corner() - cursor_position).norm() < catch_radius {
+            Some(BoundingBoxPart::CornerLowerLeft)
+        } else if (self.lr_corner() - cursor_position).norm() < catch_radius {
+            Some(BoundingBoxPart::CornerLowerRight)
+        } else if cursor_position.x >= self.x_min
+            && cursor_position.y >= self.y_min
+            && cursor_position.x <= self.x_max
+            && cursor_position.y <= self.y_max
+        {
+            Some(BoundingBoxPart::CentralArea)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BoundingBoxPart {
+    CentralArea,
+    CornerUpperLeft,
+    CornerUpperRight,
+    CornerLowerRight,
+    CornerLowerLeft,
+    EdgeLeft,
+    EdgeRight,
+    EdgeTop,
+    EdgeBottom,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct BoundingBoxElement {
+    pub id: usize,
+    pub part: BoundingBoxPart,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BoundingBoxEditMode {
+    None,
+    New {
+        id: usize,
+        start_point: Option<Vector2<f32>>,
+    },
+    Selected {
+        id: usize,
+    },
+    DragPartElement {
+        id: usize,
+        part: BoundingBoxPart,
+    },
+}
+
+impl BoundingBoxEditMode {
+    pub fn get_part_element(
+        self: &Self,
+        cursor_position: Vector2<f32>,
+        annoation_bboxes: &Vec<AnnoationBoundingBox>,
+    ) -> Option<BoundingBoxElement> {
+        for (id, bbox) in annoation_bboxes.iter().enumerate() {
+            if let Some(part) = bbox.get_part(cursor_position) {
+                return Some(BoundingBoxElement { id: id, part: part });
+            }
+        }
+
+        // Default
+        None
+    }
+
+    // Button down => Start Action
+    pub fn mouse_button_down(
+        self: &mut Self,
+        cursor_position: Vector2<f32>,
+        annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
+    ) {
+        match self {
+            BoundingBoxEditMode::None => {
+                for (i, bbox) in annoation_bboxes.iter().enumerate() {
+                    if bbox.contains((cursor_position.x, cursor_position.y)) {
+                        *self = BoundingBoxEditMode::Selected { id: i };
+                        return;
+                    }
+                }
+
+                // Create new BoundingBox
+                annoation_bboxes.push(AnnoationBoundingBox::default());
+                *self = BoundingBoxEditMode::New {
+                    id: annoation_bboxes.len() - 1,
+                    start_point: Some(cursor_position),
+                };
+            }
+            BoundingBoxEditMode::Selected { id } => {
+                for (i, bbox) in annoation_bboxes.iter().enumerate() {
+                    if bbox.contains((cursor_position.x, cursor_position.y)) {
+                        *self = BoundingBoxEditMode::Selected { id: i };
+                        return;
+                    }
+                }
+
+                // Create new BoundingBox
+                annoation_bboxes.push(AnnoationBoundingBox::default());
+                *self = BoundingBoxEditMode::New {
+                    id: annoation_bboxes.len() - 1,
+                    start_point: Some(cursor_position),
+                };
+            }
+            BoundingBoxEditMode::New { id, start_point } => {
+                if let Some(bbox) = annoation_bboxes.get_mut(*id) {
+                    if start_point.is_none() {
+                        *start_point = Some(cursor_position);
+                    } else {
+                        bbox.set(start_point.unwrap(), cursor_position);
+                    }
+                }
+            }
+            BoundingBoxEditMode::DragPartElement { id, part } => {}
+        }
+
+        // if self.start_point {
+        //     self.bbox.set(start_point, cursor_position);
+        // }
+    }
+
+    // Button down => End Action
+    pub fn mouse_button_up(self: &mut Self, cursor_position: Vector2<f32>) {
+        match self {
+            BoundingBoxEditMode::None => {}
+            BoundingBoxEditMode::New { id, start_point } => {
+                *self = BoundingBoxEditMode::None;
+            }
+            BoundingBoxEditMode::Selected { id } => {}
+            BoundingBoxEditMode::DragPartElement { id, part } => {}
+        }
+
+        // if self.start_point {
+        //     self.bbox.set(start_point, cursor_position);
+        // }
+    }
+
+    pub fn update(
+        self: &mut Self,
+        cursor_position: Vector2<f32>,
+        annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
+    ) {
+        match self {
+            BoundingBoxEditMode::None => {}
+            BoundingBoxEditMode::New { id, start_point } => {
+                if let Some(bbox) = annoation_bboxes.get_mut(*id) {
+                    if start_point.is_some() {
+                        bbox.set(start_point.unwrap(), cursor_position);
+                    }
+                }
+            }
+            BoundingBoxEditMode::Selected { id } => {}
+            BoundingBoxEditMode::DragPartElement { id, part } => {}
+        }
+    }
+}
+
 /// The state of the application
 #[derive(Debug, AppState)]
 pub struct OculanteState {
@@ -54,6 +275,7 @@ pub struct OculanteState {
     pub window_size: Vector2<f32>,
     pub cursor: Vector2<f32>,
     pub cursor_relative: Vector2<f32>,
+    pub cursor_within_image: bool,
     pub image_dimension: (u32, u32),
     pub sampled_color: [f32; 4],
     pub mouse_delta: Vector2<f32>,
@@ -70,10 +292,8 @@ pub struct OculanteState {
     pub current_image: Option<RgbaImage>,
     pub settings_enabled: bool,
     pub image_info: Option<ExtendedImageInfo>,
-    pub tiling: usize,
     pub mouse_grab: bool,
     pub key_grab: bool,
-    pub edit_state: EditState,
     pub pointer_over_ui: bool,
     /// Things that perisist between launches
     pub persistent_settings: PersistentSettings,
@@ -88,6 +308,11 @@ pub struct OculanteState {
     pub checker_texture: Option<Texture>,
     pub redraw: bool,
     pub first_start: bool,
+
+    // Image anntion stuff
+    pub bbox_edit_mode: BoundingBoxEditMode,
+    pub annotation_bboxes: Vec<AnnoationBoundingBox>,
+    pub current_bounding_box_element_under_cursor: Option<BoundingBoxElement>,
 }
 
 impl OculanteState {
@@ -115,6 +340,7 @@ impl Default for OculanteState {
             is_loaded: Default::default(),
             cursor: Default::default(),
             cursor_relative: Default::default(),
+            cursor_within_image: false,
             image_dimension: (0, 0),
             sampled_color: [0., 0., 0., 0.],
             player: Player::new(tx_channel.0.clone(), 20, 16384),
@@ -129,10 +355,8 @@ impl Default for OculanteState {
             current_path: Default::default(),
             settings_enabled: Default::default(),
             image_info: Default::default(),
-            tiling: 1,
             mouse_grab: Default::default(),
             key_grab: Default::default(),
-            edit_state: Default::default(),
             pointer_over_ui: Default::default(),
             persistent_settings: Default::default(),
             always_on_top: Default::default(),
@@ -144,6 +368,9 @@ impl Default for OculanteState {
             checker_texture: Default::default(),
             redraw: Default::default(),
             first_start: true,
+            bbox_edit_mode: BoundingBoxEditMode::None,
+            annotation_bboxes: vec![],
+            current_bounding_box_element_under_cursor: None,
         }
     }
 }

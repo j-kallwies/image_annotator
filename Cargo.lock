@@ -1399,17 +1399,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enumn"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2ad8cef1d801a4686bfd8919f0b30eac4c8e48968c437a6405ded4fb5272d2b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.39",
-]
-
-[[package]]
 name = "env_logger"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1715,12 +1704,6 @@ checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
-
-[[package]]
-name = "four-cc"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "431a4c31778fde52b4400de34975f219eeca55cc829a9de157cd743a5b230ecb"
 
 [[package]]
 name = "fruitbasket"
@@ -2837,30 +2820,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libheif-rs"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f644fa9c774f17b545fb3c09f8f1a29cc09385a5504c03c6a158878e9522acd"
-dependencies = [
- "enumn",
- "four-cc",
- "libc",
- "libheif-sys",
-]
-
-[[package]]
-name = "libheif-sys"
-version = "2.0.1+1.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7de0763f9bc3228f24041a972e4f5fa9082d2d29891faceb9dd4c9140817945b"
-dependencies = [
- "libc",
- "pkg-config",
- "vcpkg",
- "walkdir",
-]
-
-[[package]]
 name = "libloading"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3845,7 +3804,6 @@ dependencies = [
  "kamadak-exif",
  "lexical-sort",
  "libavif-image",
- "libheif-rs",
  "libwebp-sys",
  "log",
  "lutgen",
@@ -5929,12 +5887,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vcpkg"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
 name = "vec_map"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6771,3 +6723,119 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
+
+[[patch.unused]]
+name = "action_msgs"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "actionlib_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "builtin_interfaces"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "composition_interfaces"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "diagnostic_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "example_interfaces"
+version = "0.9.3"
+
+[[patch.unused]]
+name = "examples_rclrs_message_demo"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "examples_rclrs_minimal_client_service"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "examples_rclrs_minimal_pub_sub"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "geometry_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "lifecycle_msgs"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "nav_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "nci_interfaces"
+version = "0.0.0"
+
+[[patch.unused]]
+name = "rcl_interfaces"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "rclrs"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "rclrs_example_msgs"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "rclrs_tests"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "rosgraph_msgs"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "rosidl_runtime_rs"
+version = "0.3.1"
+
+[[patch.unused]]
+name = "sensor_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "shape_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "statistics_msgs"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "std_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "std_srvs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "stereo_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "test_msgs"
+version = "1.2.1"
+
+[[patch.unused]]
+name = "trajectory_msgs"
+version = "4.2.3"
+
+[[patch.unused]]
+name = "unique_identifier_msgs"
+version = "2.2.1"
+
+[[patch.unused]]
+name = "visualization_msgs"
+version = "4.2.3"

@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use image::{self};
 use image::{EncodableLayout, Rgba, RgbaImage};
 use std::sync::mpsc::{self};
@@ -28,16 +28,49 @@ use strum_macros::EnumIter;
 
 use crate::appstate::{ImageGeometry, Message, OculanteState};
 use crate::cache::Cache;
-use crate::image_editing::{self, ImageOperation};
 use crate::image_loader::open_image;
 use crate::shortcuts::{lookup, InputEvent, Shortcuts};
 
 pub const SUPPORTED_EXTENSIONS: &[&str] = &[
-    "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "jpg", "png", "pnm", "psd", "svg",
-    "tga", "tif", "tiff", "webp", "nef", "cr2", "dng", "mos", "erf", "raf", "arw", "3fr", "ari",
-    "srf", "sr2", "braw", "r3d", "nrw", "raw", "avif", "jxl", "ppm", "qoi",
+    "bmp",
+    "dds",
+    "exr",
+    "ff",
+    "gif",
+    "hdr",
+    "ico",
+    "jpeg",
+    "jpg",
+    "png",
+    "pnm",
+    "psd",
+    "svg",
+    "tga",
+    "tif",
+    "tiff",
+    "webp",
+    "nef",
+    "cr2",
+    "dng",
+    "mos",
+    "erf",
+    "raf",
+    "arw",
+    "3fr",
+    "ari",
+    "srf",
+    "sr2",
+    "braw",
+    "r3d",
+    "nrw",
+    "raw",
+    "avif",
+    "jxl",
+    "ppm",
+    "qoi",
     #[cfg(feature = "heif")]
-    "heif", "heic",
+    "heif",
+    "heic",
 ];
 
 fn is_pixel_fully_transparent(p: &Rgba<u8>) -> bool {
@@ -219,7 +252,7 @@ pub fn send_image_threaded(
                         if largest_side > max_texture_size {
                             _ = message_sender.send(Message::warn("This image exceeded the maximum resolution and will be be scaled down."));
                             let scale_factor = max_texture_size as f32 / largest_side as f32;
-                            let new_dimensions = (
+                            let _new_dimensions = (
                                 (f.buffer.dimensions().0 as f32 * scale_factor)
                                     .min(max_texture_size as f32)
                                     as u32,
@@ -228,13 +261,13 @@ pub fn send_image_threaded(
                                     as u32,
                             );
 
-                            let mut frame = f;
-                            let op = ImageOperation::Resize {
-                                dimensions: new_dimensions,
-                                aspect: true,
-                                filter: image_editing::ScaleFilter::Box,
-                            };
-                            _ = op.process_image(&mut frame.buffer);
+                            let frame = f;
+                            // let op = ImageOperation::Resize {
+                            //     dimensions: new_dimensions,
+                            //     aspect: true,
+                            //     filter: image_editing::ScaleFilter::Box,
+                            // };
+                            // _ = op.process_image(&mut frame.buffer);
                             let _ = texture_sender.send(frame);
                         } else {
                             let _ = texture_sender.send(f);
@@ -296,7 +329,6 @@ pub enum FrameSource {
     ///First frame of animation. This is necessary to reset the image and stop the player.
     AnimationStart,
     Still,
-    EditResult,
 }
 
 /// A single frame
@@ -322,15 +354,6 @@ impl Frame {
             buffer,
             delay: 0,
             source: FrameSource::AnimationStart,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn new_edit(buffer: RgbaImage) -> Frame {
-        Frame {
-            buffer,
-            delay: 0,
-            source: FrameSource::EditResult,
         }
     }
 
@@ -450,30 +473,6 @@ pub fn unpremult(img: &RgbaImage) -> RgbaImage {
     updated_img
 }
 
-/// Mark pixels with no alpha but color info
-pub fn highlight_bleed(img: &RgbaImage) -> RgbaImage {
-    let mut updated_img = img.clone();
-    updated_img.par_chunks_mut(4).for_each(|pixel| {
-        if pixel[3] == 0 && (pixel[0] != 0 || pixel[1] != 0 || pixel[2] != 0) {
-            pixel[1] = pixel[1].saturating_add(100);
-            pixel[3] = 255;
-        }
-    });
-    updated_img
-}
-
-/// Mark pixels with transparency
-pub fn highlight_semitrans(img: &RgbaImage) -> RgbaImage {
-    let mut updated_img = img.clone();
-    updated_img.par_chunks_mut(4).for_each(|pixel| {
-        if pixel[3] != 0 && pixel[3] != 255 {
-            pixel[1] = pixel[1].saturating_add(100);
-            pixel[3] = pixel[1].saturating_add(100);
-        }
-    });
-    updated_img
-}
-
 pub fn scale_pt(
     origin: Vector2<f32>,
     pt: Vector2<f32>,
@@ -488,11 +487,17 @@ pub fn pos_from_coord(
     pt: Vector2<f32>,
     bounds: Vector2<f32>,
     scale: f32,
-) -> Vector2<f32> {
+) -> (Vector2<f32>, bool) {
     let mut size = (pt - origin) / scale;
+    let pt_within_image =
+        size.x >= 0.0 && size.x <= bounds.x - 1.0 && size.y >= 0.0 && size.y <= bounds.y - 1.0;
     size.x = clamp(size.x, 0.0, bounds.x - 1.0);
     size.y = clamp(size.y, 0.0, bounds.y - 1.0);
-    size
+    (size, pt_within_image)
+}
+
+pub fn vector_to_tuple(pt: Vector2<f32>) -> (f32, f32) {
+    (pt.x, pt.y)
 }
 
 pub fn send_extended_info(
@@ -733,15 +738,4 @@ pub fn toggle_zen_mode(state: &mut OculanteState, app: &mut App) {
         )));
     }
     set_title(app, state);
-}
-
-/// Fix missing exif by re-applying exif to saved files
-pub fn fix_exif(p: &Path, exif: Option<Bytes>) -> Result<()> {
-    use std::fs::{self, File};
-    let input = fs::read(p)?;
-    let mut dynimage = DynImage::from_bytes(input.into())?.context("Unsupported EXIF format")?;
-    dynimage.set_exif(exif);
-    let output = File::create(p)?;
-    dynimage.encoder().write_to(output)?;
-    Ok(())
 }

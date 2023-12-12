@@ -10,9 +10,12 @@ use log::warn;
 use nalgebra::Vector2;
 use notan::app::Event;
 use notan::draw::*;
+use notan::egui::CursorIcon;
 use notan::egui::{self, *};
 use notan::prelude::*;
+use palette::white_point::E;
 use shortcuts::key_pressed;
+use std::borrow::BorrowMut;
 use std::path::PathBuf;
 use std::sync::mpsc;
 pub mod cache;
@@ -20,7 +23,6 @@ pub mod scrubber;
 pub mod settings;
 pub mod shortcuts;
 #[cfg(feature = "turbo")]
-use crate::image_editing::lossless_tx;
 use crate::scrubber::find_first_image_in_directory;
 use crate::settings::set_system_theme;
 use crate::settings::ColorTheme;
@@ -41,11 +43,6 @@ mod ui;
 #[cfg(feature = "update")]
 mod update;
 use ui::*;
-
-use crate::image_editing::EditState;
-
-mod image_editing;
-pub mod paint;
 
 pub const FONT: &[u8; 309828] = include_bytes!("../res/fonts/Inter-Regular.ttf");
 
@@ -272,7 +269,7 @@ fn init(gfx: &mut Graphics, plugins: &mut Plugins) -> OculanteState {
         style.text_styles.get_mut(&TextStyle::Button).unwrap().size = 18. * font_scale;
         style.text_styles.get_mut(&TextStyle::Small).unwrap().size = 15. * font_scale;
         style.text_styles.get_mut(&TextStyle::Heading).unwrap().size = 22. * font_scale;
-        debug!("Accent color: {:?}",state.persistent_settings.accent_color);
+        debug!("Accent color: {:?}", state.persistent_settings.accent_color);
         style.visuals.selection.bg_fill = Color32::from_rgb(
             state.persistent_settings.accent_color[0],
             state.persistent_settings.accent_color[1],
@@ -290,8 +287,7 @@ fn init(gfx: &mut Graphics, plugins: &mut Plugins) -> OculanteState {
         // Set text on highlighted elements
         style.visuals.selection.stroke = Stroke::new(2.0, Color32::from_gray(accent_color_luma));
         ctx.set_fonts(fonts);
-        
-  
+
         ctx.set_style(style);
     });
 
@@ -370,49 +366,6 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                 state.persistent_settings.save_blocking();
                 app.backend.exit();
             }
-            #[cfg(feature = "turbo")]
-            if key_pressed(app, state, LosslessRotateRight) {
-                debug!("Lossless rotate right");
-
-                if let Some(p) = &state.current_path {
-                    if lossless_tx(
-                        p,
-                        turbojpeg::Transform {
-                            op: turbojpeg::TransformOp::Rot90,
-                            ..turbojpeg::Transform::default()
-                        },
-                    )
-                    .is_ok()
-                    {
-                        state.is_loaded = false;
-                        // This needs "deep" reload
-                        state.player.cache.clear();
-                        state.player.load(p, state.message_channel.0.clone());
-                    }
-                }
-            }
-            #[cfg(feature = "turbo")]
-            if key_pressed(app, state, LosslessRotateLeft) {
-                debug!("Lossless rotate left");
-                if let Some(p) = &state.current_path {
-                    if lossless_tx(
-                        p,
-                        turbojpeg::Transform {
-                            op: turbojpeg::TransformOp::Rot270,
-                            ..turbojpeg::Transform::default()
-                        },
-                    )
-                    .is_ok()
-                    {
-                        state.is_loaded = false;
-                        // This needs "deep" reload
-                        state.player.cache.clear();
-                        state.player.load(p, state.message_channel.0.clone());
-                    } else {
-                        warn!("rotate left failed")
-                    }
-                }
-            }
             #[cfg(feature = "file_open")]
             if key_pressed(app, state, Browse) {
                 state.redraw = true;
@@ -445,9 +398,6 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                     &state.current_path,
                     &state.extended_info_channel,
                 );
-            }
-            if key_pressed(app, state, EditMode) {
-                state.persistent_settings.edit_enabled = !state.persistent_settings.edit_enabled;
             }
             #[cfg(not(target_os = "netbsd"))]
             if key_pressed(app, state, DeleteFile) {
@@ -510,6 +460,20 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
         _ => (),
     }
 
+    // let mouse_pos = app.mouse.position();
+    // // dbg!(mouse_pos);
+
+    // let cursor_relative = pos_from_coord(
+    //     state.image_geometry.offset,
+    //     mouse_pos.size_vec(),
+    //     Vector2::new(
+    //         state.image_dimension.0 as f32,
+    //         state.image_dimension.1 as f32,
+    //     ),
+    //     state.image_geometry.scale,
+    // );
+    // dbg!(cursor_relative);
+
     match evt {
         Event::Exit => {
             info!("About to exit");
@@ -570,22 +534,26 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                 }
             }
         }
-        Event::MouseDown { button, .. } => {
-            state.drag_enabled = true;
-            match button {
-                MouseButton::Left => {
-                    if !state.mouse_grab {
-                        state.drag_enabled = true;
-                    }
-                }
-                MouseButton::Middle => {
+        Event::MouseDown { button, .. } => match button {
+            MouseButton::Right | MouseButton::Middle => {
+                if !state.mouse_grab {
                     state.drag_enabled = true;
                 }
-                _ => {}
             }
-        }
+            MouseButton::Left => {
+                if state.cursor_within_image {
+                    state
+                        .bbox_edit_mode
+                        .mouse_button_down(state.cursor_relative, &mut state.annotation_bboxes);
+                }
+            }
+            _ => {}
+        },
         Event::MouseUp { button, .. } => match button {
-            MouseButton::Left | MouseButton::Middle => state.drag_enabled = false,
+            MouseButton::Right | MouseButton::Middle => state.drag_enabled = false,
+            MouseButton::Left => {
+                state.bbox_edit_mode.mouse_button_up(state.cursor_relative);
+            }
             _ => {}
         },
         _ => {
@@ -617,6 +585,20 @@ fn update(app: &mut App, state: &mut OculanteState) {
 
     state.mouse_delta = Vector2::new(mouse_pos.0, mouse_pos.1) - state.cursor;
     state.cursor = mouse_pos.size_vec();
+    (state.cursor_relative, state.cursor_within_image) = pos_from_coord(
+        state.image_geometry.offset,
+        state.cursor,
+        Vector2::new(
+            state.image_dimension.0 as f32,
+            state.image_dimension.1 as f32,
+        ),
+        state.image_geometry.scale,
+    );
+
+    state
+        .bbox_edit_mode
+        .update(state.cursor_relative, &mut state.annotation_bboxes);
+
     if state.drag_enabled {
         if !state.mouse_grab || app.mouse.is_down(MouseButton::Middle) {
             state.image_geometry.offset += state.mouse_delta;
@@ -626,25 +608,6 @@ fn update(app: &mut App, state: &mut OculanteState) {
 
     // Since we can't access the window in the event loop, we store it in the state
     state.window_size = app.window().size().size_vec();
-
-    if state.persistent_settings.info_enabled || state.edit_state.painting {
-        state.cursor_relative = pos_from_coord(
-            state.image_geometry.offset,
-            state.cursor,
-            Vector2::new(
-                state.image_dimension.0 as f32,
-                state.image_dimension.1 as f32,
-            ),
-            state.image_geometry.scale,
-        );
-    }
-
-    // make sure that in edit mode, RGBA is set.
-    // This is a bit lazy. but instead of writing lots of stuff for an ubscure feature,
-    // let's disable it here.
-    if state.persistent_settings.edit_enabled {
-        state.persistent_settings.current_channel = ColorChannel::Rgba;
-    }
 
     // redraw if extended info is missing so we make sure it's promply displayed
     if state.persistent_settings.info_enabled && state.image_info.is_none() {
@@ -722,8 +685,6 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
         match frame.source {
             FrameSource::Still => {
                 debug!("Received still");
-                state.edit_state.result_image_op = Default::default();
-                state.edit_state.result_pixel_op = Default::default();
 
                 if !state.persistent_settings.keep_view {
                     state.reset_image = true;
@@ -739,48 +700,8 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                     state.reset_image = true;
                 }
 
-                if !state.persistent_settings.keep_edits {
-                    state.edit_state = Default::default();
-                } else {
-                    state.edit_state.result_pixel_op = Default::default();
-                    state.edit_state.result_image_op = Default::default();
-                }
-
-                // Load edit information if any
-                if let Some(p) = &state.current_path {
-                    if p.with_extension("oculante").is_file() {
-                        if let Ok(f) = std::fs::File::open(p.with_extension("oculante")) {
-                            if let Ok(edit_state) = serde_json::from_reader::<_, EditState>(f) {
-                                state.send_message("Edits have been loaded for this image.");
-                                state.edit_state = edit_state;
-                                state.persistent_settings.edit_enabled = true;
-                                state.reset_image = true;
-                            }
-                        }
-                    } else if let Some(parent) = p.parent() {
-                        debug!("Looking for {}", parent.join(".oculante").display());
-                        if parent.join(".oculante").is_file() {
-                            info!("is file {}", parent.join(".oculante").display());
-
-                            if let Ok(f) = std::fs::File::open(parent.join(".oculante")) {
-                                if let Ok(edit_state) = serde_json::from_reader::<_, EditState>(f) {
-                                    state.send_message(
-                                        "Directory edits have been loaded for this image.",
-                                    );
-                                    state.edit_state = edit_state;
-                                    state.persistent_settings.edit_enabled = true;
-                                    state.reset_image = true;
-                                }
-                            }
-                        }
-                    }
-                }
                 state.redraw = false;
                 state.image_info = None;
-            }
-            FrameSource::EditResult => {
-                // debug!("EditResult");
-                // state.edit_state.is_processing = false;
             }
             FrameSource::AnimationStart => {
                 state.redraw = true;
@@ -799,7 +720,8 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
             }
         } else {
             debug!("Setting texture");
-            #[cfg(debug_assertions)] {
+            #[cfg(debug_assertions)]
+            {
                 _ = img.save("debug.png");
             }
             state.current_texture = img.to_texture(gfx);
@@ -866,27 +788,17 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
             if let Some(checker) = &state.checker_texture {
                 draw.pattern(checker)
                     // .size(texture.width() as f32, texture.height() as f32)
-                    .size(texture.width() as f32 * state.image_geometry.scale * state.tiling as f32, texture.height() as f32 * state.image_geometry.scale* state.tiling as f32)
+                    .size(texture.width() as f32 * state.image_geometry.scale as f32, texture.height() as f32 * state.image_geometry.scale as f32)
                     .blend_mode(BlendMode::ADD)
                     .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
                     // .scale(state.image_geometry.scale, state.image_geometry.scale)
                     ;
             }
         }
-        if state.tiling < 2 {
-            draw.image(texture)
-                .blend_mode(BlendMode::NORMAL)
-                .scale(state.image_geometry.scale, state.image_geometry.scale)
-                .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
-        } else {
-            draw.pattern(texture)
-                .scale(state.image_geometry.scale, state.image_geometry.scale)
-                .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
-                .size(
-                    texture.width() * state.tiling as f32,
-                    texture.height() * state.tiling as f32,
-                );
-        }
+        draw.image(texture)
+            .blend_mode(BlendMode::NORMAL)
+            .scale(state.image_geometry.scale, state.image_geometry.scale)
+            .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
 
         if state.persistent_settings.show_frame {
             draw.rect((0.0, 0.0), texture.size())
@@ -900,6 +812,139 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                 .blend_mode(BlendMode::ADD)
                 .scale(state.image_geometry.scale, state.image_geometry.scale)
                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        }
+
+        {
+            let color = Color {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+                a: 0.5,
+            };
+            let line_width = 2.0 / state.image_geometry.scale;
+
+            draw.line(
+                (0.0, state.cursor_relative.y),
+                (texture.width(), state.cursor_relative.y),
+            )
+            .width(line_width)
+            .color(color)
+            .scale(state.image_geometry.scale, state.image_geometry.scale)
+            .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+
+            draw.line(
+                (state.cursor_relative.x, 0.0),
+                (state.cursor_relative.x, texture.height()),
+            )
+            .width(line_width)
+            .color(color)
+            .scale(state.image_geometry.scale, state.image_geometry.scale)
+            .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        }
+
+        {
+            for (current_id, bbox) in state.annotation_bboxes.iter().enumerate() {
+                let mut fill = false;
+                if let BoundingBoxEditMode::Selected { id } = state.bbox_edit_mode {
+                    if current_id == id {
+                        fill = true;
+                    }
+                }
+
+                if fill {
+                    draw.rect(vector_to_tuple(bbox.tl_corner()), bbox.size())
+                        .stroke(3.0)
+                        .color(Color {
+                            r: 0.0,
+                            g: 1.0,
+                            b: 0.0,
+                            a: 1.0,
+                        })
+                        .blend_mode(BlendMode::NORMAL)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
+                        .fill_color(Color {
+                            r: 0.0,
+                            g: 1.0,
+                            b: 0.0,
+                            a: 0.2,
+                        })
+                        .fill();
+                } else {
+                    draw.rect(vector_to_tuple(bbox.tl_corner()), bbox.size())
+                        .stroke(3.0)
+                        .color(Color {
+                            r: 0.0,
+                            g: 1.0,
+                            b: 0.0,
+                            a: 1.0,
+                        })
+                        .blend_mode(BlendMode::NORMAL)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                }
+            }
+        }
+
+        state.current_bounding_box_element_under_cursor = state
+            .bbox_edit_mode
+            .get_part_element(state.cursor_relative, &state.annotation_bboxes);
+
+        if let Some(bbox_element) = state.current_bounding_box_element_under_cursor {
+            let bbox = &state.annotation_bboxes[bbox_element.id];
+
+            let radius = 15.0;
+            let line_width = 3.0;
+            let color = Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            };
+
+            match bbox_element.part {
+                BoundingBoxPart::CornerUpperLeft => {
+                    draw.circle(radius)
+                        .stroke(3.0)
+                        .color(color)
+                        .blend_mode(BlendMode::NORMAL)
+                        .translate(bbox.tl_corner().x, bbox.tl_corner().y)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                }
+
+                BoundingBoxPart::CornerUpperRight => {
+                    draw.circle(radius)
+                        .stroke(line_width)
+                        .color(color)
+                        .blend_mode(BlendMode::NORMAL)
+                        .translate(bbox.tr_corner().x, bbox.tr_corner().y)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                }
+
+                BoundingBoxPart::CornerLowerLeft => {
+                    draw.circle(radius)
+                        .stroke(line_width)
+                        .color(color)
+                        .blend_mode(BlendMode::NORMAL)
+                        .translate(bbox.ll_corner().x, bbox.ll_corner().y)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                }
+
+                BoundingBoxPart::CornerLowerRight => {
+                    draw.circle(radius)
+                        .stroke(line_width)
+                        .color(color)
+                        .blend_mode(BlendMode::NORMAL)
+                        .translate(bbox.lr_corner().x, bbox.lr_corner().y)
+                        .scale(state.image_geometry.scale, state.image_geometry.scale)
+                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                }
+
+                _ => {}
+            }
         }
 
         if state.persistent_settings.show_minimap {
@@ -917,39 +962,20 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                     .scale(scale, scale);
             }
         }
-
-        // Draw a brush preview when paint mode is on
-        if state.edit_state.painting {
-            if let Some(stroke) = state.edit_state.paint_strokes.last() {
-                let dim = texture.width().min(texture.height()) / 50.;
-                draw.circle(20.)
-                    // .translate(state.cursor_relative.x, state.cursor_relative.y)
-                    .alpha(0.5)
-                    .stroke(1.5)
-                    .scale(state.image_geometry.scale, state.image_geometry.scale)
-                    .scale(stroke.width * dim, stroke.width * dim)
-                    .translate(state.cursor.x, state.cursor.y);
-
-                // For later: Maybe paint the actual brush? Maybe overkill.
-
-                // if let Some(brush) = state.edit_state.brushes.get(stroke.brush_index) {
-                //     if let Some(brush_tex) = brush.to_texture(gfx) {
-                //         draw.image(&brush_tex)
-                //             .blend_mode(BlendMode::NORMAL)
-                //             .translate(state.cursor.x, state.cursor.y)
-                //             .scale(state.scale, state.scale)
-                //             .scale(stroke.width*dim, stroke.width*dim)
-                //             // .translate(state.offset.x as f32, state.offset.y as f32)
-                //             // .transform(state.cursor_relative)
-                //             ;
-                //     }
-                // }
-            }
-        }
     }
 
     let egui_output = plugins.egui(|ctx| {
         // the top menu bar
+
+        // Default cursor
+        ctx.set_cursor_icon(CursorIcon::Default);
+
+        // Special cursors
+        if state.cursor_within_image {
+            if state.current_bounding_box_element_under_cursor.is_some() {
+                ctx.set_cursor_icon(CursorIcon::PointingHand);
+            }
+        }
 
         if !state.persistent_settings.zen_mode {
             egui::TopBottomPanel::top("menu")
@@ -1019,13 +1045,6 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
             info_ui(ctx, state, gfx);
         }
 
-        if state.persistent_settings.edit_enabled
-            && !state.settings_enabled
-            && !state.persistent_settings.zen_mode
-        {
-            edit_ui(app, ctx, state, gfx);
-        }
-
         if !state.is_loaded {
             egui::TopBottomPanel::bottom("loader").show_animated(
                 ctx,
@@ -1047,7 +1066,7 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
 
         // if there is interaction on the ui (dragging etc)
         // we don't want zoom & pan to work, so we "grab" the pointer
-        if ctx.is_using_pointer() || state.edit_state.painting || ctx.is_pointer_over_area() {
+        if ctx.is_using_pointer() || ctx.is_pointer_over_area() {
             state.mouse_grab = true;
         } else {
             state.mouse_grab = false;
@@ -1065,9 +1084,6 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
     if state.network_mode {
         app.window().request_frame();
     }
-    // if state.edit_state.is_processing {
-    //     app.window().request_frame();
-    // }
     let c = state.persistent_settings.background_color;
     // draw.clear(Color:: from_bytes(c[0], c[1], c[2], 255));
     draw.clear(Color::from_rgb(

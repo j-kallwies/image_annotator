@@ -37,7 +37,6 @@ pub struct PersistentSettings {
     pub recent_images: Vec<PathBuf>,
     pub title_format: String,
     pub info_enabled: bool,
-    pub edit_enabled: bool,
     // pos.x, pos.y, width, height
     pub window_geometry: ((u32, u32), (u32, u32)),
     pub last_open_directory: PathBuf,
@@ -67,7 +66,6 @@ impl Default for PersistentSettings {
             recent_images: Default::default(),
             title_format: "{APP} | {VERSION} | {FULLPATH}".into(),
             info_enabled: Default::default(),
-            edit_enabled: Default::default(),
             window_geometry: Default::default(),
             last_open_directory: std::env::current_dir().unwrap_or_default(),
             show_checker_background: Default::default(),
