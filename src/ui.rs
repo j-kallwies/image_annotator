@@ -334,13 +334,15 @@ pub fn info_ui(ctx: &Context, state: &mut OculanteState, gfx: &mut Graphics) {
             ui.separator();
             ui.separator();
             ui.label(format!(
-                "{:?}",
+                "current_bounding_box_element_under_cursor: {:?}",
                 state.current_bounding_box_element_under_cursor
             ));
             ui.separator();
-            ui.label(format!("{:?}", state.bbox_edit_mode));
+            ui.label(format!("selected_bbox_id: {:?}", state.selected_bbox_id));
             ui.separator();
-            ui.label(format!("{:?}", state.annotation_bboxes));
+            ui.label(format!("bbox_edit_mode: {:?}", state.bbox_edit_mode));
+            ui.separator();
+            ui.label(format!("annotation_bboxes: {:?}", state.annotation_bboxes));
             ui.separator();
         });
 }
