@@ -400,10 +400,11 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                 );
             }
             #[cfg(not(target_os = "netbsd"))]
-            if key_pressed(app, state, DeleteFile) {
-                if let Some(p) = &state.current_path {
-                    _ = trash::delete(p);
-                    state.send_message("Deleted image");
+            if key_pressed(app, state, DeleteAnnoation) {
+                if let Some(id) = state.selected_bbox_id {
+                    state.annotation_bboxes.remove(id);
+                    state.selected_bbox_id = None;
+                    state.send_message("Deleted annotation");
                 }
             }
             if key_pressed(app, state, ZoomIn) {
@@ -542,9 +543,11 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
             }
             MouseButton::Left => {
                 if state.cursor_within_image {
-                    state
-                        .bbox_edit_mode
-                        .mouse_button_down(state.cursor_relative, &mut state.annotation_bboxes);
+                    state.bbox_edit_mode.mouse_button_down(
+                        state.cursor_relative,
+                        &mut state.annotation_bboxes,
+                        &mut state.selected_bbox_id,
+                    );
                 }
             }
             _ => {}
@@ -552,7 +555,9 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
         Event::MouseUp { button, .. } => match button {
             MouseButton::Right | MouseButton::Middle => state.drag_enabled = false,
             MouseButton::Left => {
-                state.bbox_edit_mode.mouse_button_up(state.cursor_relative);
+                state
+                    .bbox_edit_mode
+                    .mouse_button_up(state.cursor_relative, &mut state.annotation_bboxes);
             }
             _ => {}
         },
@@ -845,11 +850,12 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
         {
             for (current_id, bbox) in state.annotation_bboxes.iter().enumerate() {
                 let mut fill = false;
-                if let BoundingBoxEditMode::Selected { id } = state.bbox_edit_mode {
-                    if current_id == id {
+                state.selected_bbox_id.and_then(|selected_bbox_id| {
+                    if selected_bbox_id == current_id {
                         fill = true;
                     }
-                }
+                    Some(selected_bbox_id)
+                });
 
                 if fill {
                     draw.rect(vector_to_tuple(bbox.tl_corner()), bbox.size())
@@ -974,6 +980,12 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
         if state.cursor_within_image {
             if state.current_bounding_box_element_under_cursor.is_some() {
                 ctx.set_cursor_icon(CursorIcon::PointingHand);
+            }
+
+            match state.bbox_edit_mode {
+                BoundingBoxEditMode::DragCorner { .. } => ctx.set_cursor_icon(CursorIcon::Grabbing),
+                BoundingBoxEditMode::DragEdge { .. } => ctx.set_cursor_icon(CursorIcon::Grabbing),
+                _ => {}
             }
         }
 

@@ -784,14 +784,17 @@ pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, gfx: &mu
         if let Some(p) = &state.current_path {
             if tooltip(
                 unframed_button(TRASH, ui),
-                "Move file to trash",
-                &lookup(&state.persistent_settings.shortcuts, &DeleteFile),
+                "Remove the selected annation",
+                &lookup(&state.persistent_settings.shortcuts, &DeleteAnnoation),
                 ui,
             )
             .clicked()
             {
-                _ = trash::delete(p);
-                state.send_message("Deleted image");
+                if let Some(id) = state.selected_bbox_id {
+                    state.annotation_bboxes.remove(id);
+                    state.selected_bbox_id = None;
+                    state.send_message("Deleted annotation");
+                }
             }
         }
 

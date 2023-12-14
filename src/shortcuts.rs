@@ -35,7 +35,7 @@ pub enum InputEvent {
     PanRight,
     PanUp,
     PanDown,
-    DeleteFile,
+    DeleteAnnoation,
     Copy,
     Paste,
     Browse,
@@ -124,7 +124,7 @@ impl ShortcutExt for Shortcuts {
             .add_key(InputEvent::ZoomFour, "Key4")
             .add_key(InputEvent::ZoomFive, "Key5")
             .add_key(InputEvent::ZenMode, "Z")
-            .add_key(InputEvent::DeleteFile, "Delete")
+            .add_key(InputEvent::DeleteAnnoation, "Delete")
             // .add_key(InputEvent::Browse, "F1") // FIXME: As Shortcuts is a HashMap, only the newer key-sequence will be registered
             .add_keys(InputEvent::Browse, &["LControl", "O"])
             .add_keys(InputEvent::PanRight, &["LShift", "Right"])
