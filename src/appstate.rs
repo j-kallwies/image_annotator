@@ -84,6 +84,14 @@ impl AnnoationBoundingBox {
         )
     }
 
+    pub fn width(self) -> f32 {
+        self.x_max - self.x_min
+    }
+
+    pub fn height(self) -> f32 {
+        self.y_max - self.y_min
+    }
+
     pub fn size(self) -> (f32, f32) {
         (self.x_max - self.x_min, self.y_max - self.y_min)
     }

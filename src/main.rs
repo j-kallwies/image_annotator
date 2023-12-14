@@ -857,37 +857,47 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                     Some(selected_bbox_id)
                 });
 
+                let line_color = Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 0.75,
+                };
+                let line_width = 3.0;
+
                 if fill {
-                    draw.rect(vector_to_tuple(bbox.tl_corner()), bbox.size())
-                        .stroke(3.0)
-                        .color(Color {
-                            r: 0.0,
-                            g: 1.0,
-                            b: 0.0,
-                            a: 1.0,
-                        })
-                        .blend_mode(BlendMode::NORMAL)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
-                        .fill_color(Color {
-                            r: 0.0,
-                            g: 1.0,
-                            b: 0.0,
-                            a: 0.2,
-                        })
-                        .fill();
+                    draw.rect(
+                        vector_to_tuple(
+                            bbox.tl_corner()
+                                - nalgebra::Vector2::new(line_width / 2.0, line_width / 2.0),
+                        ),
+                        (bbox.width() + line_width, bbox.height() + line_width),
+                    )
+                    .stroke(line_width)
+                    .color(line_color)
+                    .blend_mode(BlendMode::NORMAL)
+                    .scale(state.image_geometry.scale, state.image_geometry.scale)
+                    .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
+                    .fill_color(Color {
+                        r: 0.0,
+                        g: 1.0,
+                        b: 0.0,
+                        a: 0.2,
+                    })
+                    .fill();
                 } else {
-                    draw.rect(vector_to_tuple(bbox.tl_corner()), bbox.size())
-                        .stroke(3.0)
-                        .color(Color {
-                            r: 0.0,
-                            g: 1.0,
-                            b: 0.0,
-                            a: 1.0,
-                        })
-                        .blend_mode(BlendMode::NORMAL)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                    draw.rect(
+                        vector_to_tuple(
+                            bbox.tl_corner()
+                                - nalgebra::Vector2::new(line_width / 2.0, line_width / 2.0),
+                        ),
+                        (bbox.width() + line_width, bbox.height() + line_width),
+                    )
+                    .stroke(line_width)
+                    .color(line_color)
+                    .blend_mode(BlendMode::NORMAL)
+                    .scale(state.image_geometry.scale, state.image_geometry.scale)
+                    .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
                 }
             }
         }
@@ -896,62 +906,111 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
             .bbox_edit_mode
             .get_part_element(state.cursor_relative, &state.annotation_bboxes);
 
-        if let Some(bbox_element) = state.current_bounding_box_element_under_cursor {
-            let bbox = &state.annotation_bboxes[bbox_element.id];
+        // if let Some(bbox_element) = state.current_bounding_box_element_under_cursor {
+        //     let bbox = &state.annotation_bboxes[bbox_element.id];
 
-            let radius = 15.0;
-            let line_width = 3.0;
-            let color = Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
-                a: 1.0,
-            };
+        //     let radius = 15.0;
+        //     let line_width = 3.0;
+        //     let color = Color {
+        //         r: 1.0,
+        //         g: 1.0,
+        //         b: 1.0,
+        //         a: 1.0,
+        //     };
 
-            match bbox_element.part {
-                BoundingBoxPart::CornerUpperLeft => {
-                    draw.circle(radius)
-                        .stroke(3.0)
-                        .color(color)
-                        .blend_mode(BlendMode::NORMAL)
-                        .translate(bbox.tl_corner().x, bbox.tl_corner().y)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
-                }
+        //     // let color_edge = Color {
+        //     //     r: 0.0,
+        //     //     g: 1.0,
+        //     //     b: 0.0,
+        //     //     a: 1.0,
+        //     // };
 
-                BoundingBoxPart::CornerUpperRight => {
-                    draw.circle(radius)
-                        .stroke(line_width)
-                        .color(color)
-                        .blend_mode(BlendMode::NORMAL)
-                        .translate(bbox.tr_corner().x, bbox.tr_corner().y)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
-                }
+        //     match bbox_element.part {
+        //         BoundingBoxPart::CornerUpperLeft => {
+        //             draw.circle(radius)
+        //                 .stroke(3.0)
+        //                 .color(color)
+        //                 .blend_mode(BlendMode::NORMAL)
+        //                 .translate(bbox.tl_corner().x, bbox.tl_corner().y)
+        //                 .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
 
-                BoundingBoxPart::CornerLowerLeft => {
-                    draw.circle(radius)
-                        .stroke(line_width)
-                        .color(color)
-                        .blend_mode(BlendMode::NORMAL)
-                        .translate(bbox.ll_corner().x, bbox.ll_corner().y)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
-                }
+        //         BoundingBoxPart::CornerUpperRight => {
+        //             draw.circle(radius)
+        //                 .stroke(line_width)
+        //                 .color(color)
+        //                 .blend_mode(BlendMode::NORMAL)
+        //                 .translate(bbox.tr_corner().x, bbox.tr_corner().y)
+        //                 .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
 
-                BoundingBoxPart::CornerLowerRight => {
-                    draw.circle(radius)
-                        .stroke(line_width)
-                        .color(color)
-                        .blend_mode(BlendMode::NORMAL)
-                        .translate(bbox.lr_corner().x, bbox.lr_corner().y)
-                        .scale(state.image_geometry.scale, state.image_geometry.scale)
-                        .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
-                }
+        //         BoundingBoxPart::CornerLowerLeft => {
+        //             draw.circle(radius)
+        //                 .stroke(line_width)
+        //                 .color(color)
+        //                 .blend_mode(BlendMode::NORMAL)
+        //                 .translate(bbox.ll_corner().x, bbox.ll_corner().y)
+        //                 .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
 
-                _ => {}
-            }
-        }
+        //         BoundingBoxPart::CornerLowerRight => {
+        //             draw.circle(radius)
+        //                 .stroke(line_width)
+        //                 .color(color)
+        //                 .blend_mode(BlendMode::NORMAL)
+        //                 .translate(bbox.lr_corner().x, bbox.lr_corner().y)
+        //                 .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
+
+        //         BoundingBoxPart::EdgeLeft => {
+        //             draw.line(
+        //                 vector_to_tuple(bbox.tl_corner()),
+        //                 vector_to_tuple(bbox.ll_corner()),
+        //             )
+        //             .width(line_width)
+        //             .color(color_edge)
+        //             .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //             .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
+
+        //         BoundingBoxPart::EdgeRight => {
+        //             draw.line(
+        //                 vector_to_tuple(bbox.tr_corner()),
+        //                 vector_to_tuple(bbox.lr_corner()),
+        //             )
+        //             .width(line_width)
+        //             .color(color_edge)
+        //             .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //             .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
+        //         BoundingBoxPart::EdgeTop => {
+        //             draw.line(
+        //                 vector_to_tuple(bbox.tl_corner()),
+        //                 vector_to_tuple(bbox.tr_corner()),
+        //             )
+        //             .width(line_width)
+        //             .color(color_edge)
+        //             .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //             .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
+        //         BoundingBoxPart::EdgeBottom => {
+        //             draw.line(
+        //                 vector_to_tuple(bbox.ll_corner()),
+        //                 vector_to_tuple(bbox.lr_corner()),
+        //             )
+        //             .width(line_width)
+        //             .color(color_edge)
+        //             .scale(state.image_geometry.scale, state.image_geometry.scale)
+        //             .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+        //         }
+
+        //         BoundingBoxPart::CentralArea => {}
+        //     }
+        // }
 
         if state.persistent_settings.show_minimap {
             // let offset_x = app.window().size().0 as f32 - state.image_dimension.0 as f32;
@@ -978,13 +1037,46 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
 
         // Special cursors
         if state.cursor_within_image {
-            if state.current_bounding_box_element_under_cursor.is_some() {
-                ctx.set_cursor_icon(CursorIcon::PointingHand);
+            if let Some(element_under_cursor) = state.current_bounding_box_element_under_cursor {
+                match element_under_cursor.part {
+                    BoundingBoxPart::EdgeBottom | BoundingBoxPart::EdgeTop => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeVertical)
+                    }
+                    BoundingBoxPart::EdgeLeft | BoundingBoxPart::EdgeRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeHorizontal)
+                    }
+                    BoundingBoxPart::CornerUpperLeft | BoundingBoxPart::CornerLowerRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeNwSe)
+                    }
+                    BoundingBoxPart::CornerLowerLeft | BoundingBoxPart::CornerUpperRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeNeSw)
+                    }
+                    _ => ctx.set_cursor_icon(CursorIcon::PointingHand),
+                }
             }
 
             match state.bbox_edit_mode {
-                BoundingBoxEditMode::DragCorner { .. } => ctx.set_cursor_icon(CursorIcon::Grabbing),
-                BoundingBoxEditMode::DragEdge { .. } => ctx.set_cursor_icon(CursorIcon::Grabbing),
+                BoundingBoxEditMode::DragCorner { part, .. } => match part {
+                    BoundingBoxPart::CornerLowerLeft | BoundingBoxPart::CornerUpperRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeNeSw)
+                    }
+                    BoundingBoxPart::CornerUpperLeft | BoundingBoxPart::CornerLowerRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeNwSe)
+                    }
+                    _ => {}
+                },
+                BoundingBoxEditMode::DragEdge { part, .. } => match part {
+                    BoundingBoxPart::EdgeBottom | BoundingBoxPart::EdgeTop => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeVertical)
+                    }
+                    BoundingBoxPart::EdgeLeft | BoundingBoxPart::EdgeRight => {
+                        ctx.set_cursor_icon(CursorIcon::ResizeHorizontal)
+                    }
+                    _ => {}
+                },
+                BoundingBoxEditMode::DragFullBox { .. } => {
+                    ctx.set_cursor_icon(CursorIcon::Move);
+                }
                 _ => {}
             }
         }
