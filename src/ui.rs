@@ -189,16 +189,7 @@ pub fn info_ui(ctx: &Context, state: &mut OculanteState, gfx: &mut Graphics) {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, true])
                 .show(ui, |ui| {
-                    if let Some(texture) = &state.current_texture {
-                        // texture.
-                        let tex_id = gfx.egui_register_texture(texture);
-
-                        // width of image widget
-                        // let desired_width = ui.available_width() - ui.spacing().indent;
-                        let desired_width = PANEL_WIDTH - PANEL_WIDGET_OFFSET;
-
-                        let scale = (desired_width / 8.) / texture.size().0;
-
+                    if state.current_texture.is_some() {
                         let uv_center = (
                             state.cursor_relative.x / state.image_dimension.0 as f32,
                             (state.cursor_relative.y / state.image_dimension.1 as f32),
@@ -292,46 +283,9 @@ pub fn info_ui(ctx: &Context, state: &mut OculanteState, gfx: &mut Graphics) {
                             );
                             ui.end_row();
                         });
-
-                        // make sure aspect ratio is compensated for the square preview
-                        let ratio = texture.size().0 / texture.size().1;
-                        let uv_size = (scale, scale * ratio);
-
-                        let preview_rect = ui
-                            .add(
-                                egui::Image::new(tex_id)
-                                    .maintain_aspect_ratio(false)
-                                    .fit_to_exact_size(egui::Vec2::splat(desired_width))
-                                    .uv(egui::Rect::from_x_y_ranges(
-                                        uv_center.0 - uv_size.0..=uv_center.0 + uv_size.0,
-                                        uv_center.1 - uv_size.1..=uv_center.1 + uv_size.1,
-                                    )),
-                            )
-                            .rect;
-
-                        // let stroke_color = Color32::from_white_alpha(240);
-                        let stroke_color = Color32::RED;
-                        let bg_color = Color32::BLACK.linear_multiply(0.25);
-                        ui.painter_at(preview_rect).line_segment(
-                            [preview_rect.center_bottom(), preview_rect.center_top()],
-                            Stroke::new(4., bg_color),
-                        );
-                        ui.painter_at(preview_rect).line_segment(
-                            [preview_rect.left_center(), preview_rect.right_center()],
-                            Stroke::new(4., bg_color),
-                        );
-                        ui.painter_at(preview_rect).line_segment(
-                            [preview_rect.center_bottom(), preview_rect.center_top()],
-                            Stroke::new(1., stroke_color),
-                        );
-                        ui.painter_at(preview_rect).line_segment(
-                            [preview_rect.left_center(), preview_rect.right_center()],
-                            Stroke::new(1., stroke_color),
-                        );
                     }
                 });
 
-            ui.separator();
             ui.separator();
             ui.label(format!(
                 "current_bounding_box_element_under_cursor: {:?}",
