@@ -109,7 +109,13 @@ impl AnnoationBoundingBox {
 
     fn get_part(self: &Self, cursor_position: Vector2<f32>) -> Option<BoundingBoxPart> {
         let catch_radius = 20.0;
-        if (self.tl_corner() - cursor_position).norm() < catch_radius {
+        if cursor_position.x >= self.x_min
+            && cursor_position.y >= self.y_min
+            && cursor_position.x <= self.x_max
+            && cursor_position.y <= self.y_max
+        {
+            Some(BoundingBoxPart::CentralArea)
+        } else if (self.tl_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerUpperLeft)
         } else if (self.tr_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerUpperRight)
@@ -137,12 +143,6 @@ impl AnnoationBoundingBox {
             && cursor_position.x <= self.x_max
         {
             Some(BoundingBoxPart::EdgeBottom)
-        } else if cursor_position.x >= self.x_min
-            && cursor_position.y >= self.y_min
-            && cursor_position.x <= self.x_max
-            && cursor_position.y <= self.y_max
-        {
-            Some(BoundingBoxPart::CentralArea)
         } else {
             None
         }
