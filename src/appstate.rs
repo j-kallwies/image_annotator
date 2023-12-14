@@ -213,6 +213,7 @@ impl BoundingBoxEditMode {
         annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
         selected_bbox_id: &mut Option<usize>,
     ) {
+        *selected_bbox_id = None;
         match self {
             BoundingBoxEditMode::None => {
                 if let Some(clicked_part_element) =
