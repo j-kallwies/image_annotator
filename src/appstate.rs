@@ -92,7 +92,7 @@ impl AnnoationBoundingBox {
         p.0 >= self.x_min && p.0 <= self.x_max && p.1 >= self.y_min && p.1 <= self.y_max
     }
 
-    fn set(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {
+    pub fn set(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {
         self.x_min = f32::min(p1.x, p2.x);
         self.x_max = f32::max(p1.x, p2.x);
         self.y_min = f32::min(p1.y, p2.y);
@@ -109,6 +109,26 @@ impl AnnoationBoundingBox {
             Some(BoundingBoxPart::CornerLowerLeft)
         } else if (self.lr_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerLowerRight)
+        } else if (self.x_min - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min
+            && cursor_position.y <= self.y_max
+        {
+            Some(BoundingBoxPart::EdgeLeft)
+        } else if (self.x_max - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min
+            && cursor_position.y <= self.y_max
+        {
+            Some(BoundingBoxPart::EdgeRight)
+        } else if (self.y_min - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min
+            && cursor_position.x <= self.x_max
+        {
+            Some(BoundingBoxPart::EdgeTop)
+        } else if (self.y_max - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min
+            && cursor_position.x <= self.x_max
+        {
+            Some(BoundingBoxPart::EdgeBottom)
         } else if cursor_position.x >= self.x_min
             && cursor_position.y >= self.y_min
             && cursor_position.x <= self.x_max
@@ -147,12 +167,18 @@ pub enum BoundingBoxEditMode {
         id: usize,
         start_point: Option<Vector2<f32>>,
     },
-    Selected {
-        id: usize,
-    },
-    DragPartElement {
+    DragCorner {
         id: usize,
         part: BoundingBoxPart,
+        static_opposite_point: Vector2<f32>,
+    },
+    DragEdge {
+        id: usize,
+        part: BoundingBoxPart,
+    },
+    DragFullBox {
+        id: usize,
+        offset: Vector2<f32>,
     },
 }
 
@@ -177,28 +203,69 @@ impl BoundingBoxEditMode {
         self: &mut Self,
         cursor_position: Vector2<f32>,
         annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
+        selected_bbox_id: &mut Option<usize>,
     ) {
         match self {
             BoundingBoxEditMode::None => {
-                for (i, bbox) in annoation_bboxes.iter().enumerate() {
-                    if bbox.contains((cursor_position.x, cursor_position.y)) {
-                        *self = BoundingBoxEditMode::Selected { id: i };
-                        return;
-                    }
-                }
-
-                // Create new BoundingBox
-                annoation_bboxes.push(AnnoationBoundingBox::default());
-                *self = BoundingBoxEditMode::New {
-                    id: annoation_bboxes.len() - 1,
-                    start_point: Some(cursor_position),
-                };
-            }
-            BoundingBoxEditMode::Selected { id } => {
-                for (i, bbox) in annoation_bboxes.iter().enumerate() {
-                    if bbox.contains((cursor_position.x, cursor_position.y)) {
-                        *self = BoundingBoxEditMode::Selected { id: i };
-                        return;
+                if let Some(clicked_part_element) =
+                    self.get_part_element(cursor_position, annoation_bboxes)
+                {
+                    match clicked_part_element.part {
+                        BoundingBoxPart::CentralArea => {
+                            *self = BoundingBoxEditMode::DragFullBox {
+                                id: clicked_part_element.id,
+                                offset: cursor_position
+                                    - annoation_bboxes[clicked_part_element.id].tl_corner(),
+                            };
+                            *selected_bbox_id = Some(clicked_part_element.id);
+                            return;
+                        }
+                        BoundingBoxPart::CornerUpperLeft => {
+                            *self = BoundingBoxEditMode::DragCorner {
+                                id: clicked_part_element.id,
+                                part: clicked_part_element.part,
+                                static_opposite_point: annoation_bboxes[clicked_part_element.id]
+                                    .lr_corner(),
+                            };
+                            return;
+                        }
+                        BoundingBoxPart::CornerUpperRight => {
+                            *self = BoundingBoxEditMode::DragCorner {
+                                id: clicked_part_element.id,
+                                part: clicked_part_element.part,
+                                static_opposite_point: annoation_bboxes[clicked_part_element.id]
+                                    .ll_corner(),
+                            };
+                            return;
+                        }
+                        BoundingBoxPart::CornerLowerRight => {
+                            *self = BoundingBoxEditMode::DragCorner {
+                                id: clicked_part_element.id,
+                                part: clicked_part_element.part,
+                                static_opposite_point: annoation_bboxes[clicked_part_element.id]
+                                    .tl_corner(),
+                            };
+                            return;
+                        }
+                        BoundingBoxPart::CornerLowerLeft => {
+                            *self = BoundingBoxEditMode::DragCorner {
+                                id: clicked_part_element.id,
+                                part: clicked_part_element.part,
+                                static_opposite_point: annoation_bboxes[clicked_part_element.id]
+                                    .tr_corner(),
+                            };
+                            return;
+                        }
+                        BoundingBoxPart::EdgeLeft
+                        | BoundingBoxPart::EdgeRight
+                        | BoundingBoxPart::EdgeTop
+                        | BoundingBoxPart::EdgeBottom => {
+                            *self = BoundingBoxEditMode::DragEdge {
+                                id: clicked_part_element.id,
+                                part: clicked_part_element.part,
+                            };
+                            return;
+                        }
                     }
                 }
 
@@ -218,7 +285,9 @@ impl BoundingBoxEditMode {
                     }
                 }
             }
-            BoundingBoxEditMode::DragPartElement { id, part } => {}
+            BoundingBoxEditMode::DragCorner { .. } => {}
+            BoundingBoxEditMode::DragEdge { .. } => {}
+            BoundingBoxEditMode::DragFullBox { .. } => {}
         }
 
         // if self.start_point {
@@ -227,14 +296,29 @@ impl BoundingBoxEditMode {
     }
 
     // Button down => End Action
-    pub fn mouse_button_up(self: &mut Self, cursor_position: Vector2<f32>) {
+    pub fn mouse_button_up(
+        self: &mut Self,
+        _cursor_position: Vector2<f32>,
+        annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
+    ) {
         match self {
             BoundingBoxEditMode::None => {}
-            BoundingBoxEditMode::New { id, start_point } => {
+            BoundingBoxEditMode::New { id, .. } => {
+                if annoation_bboxes[*id].size().0 == 0.0 || annoation_bboxes[*id].size().1 == 0.0 {
+                    annoation_bboxes.remove(*id);
+                }
+
                 *self = BoundingBoxEditMode::None;
             }
-            BoundingBoxEditMode::Selected { id } => {}
-            BoundingBoxEditMode::DragPartElement { id, part } => {}
+            BoundingBoxEditMode::DragCorner { .. } => {
+                *self = BoundingBoxEditMode::None;
+            }
+            BoundingBoxEditMode::DragEdge { .. } => {
+                *self = BoundingBoxEditMode::None;
+            }
+            BoundingBoxEditMode::DragFullBox { .. } => {
+                *self = BoundingBoxEditMode::None;
+            }
         }
 
         // if self.start_point {
@@ -256,8 +340,40 @@ impl BoundingBoxEditMode {
                     }
                 }
             }
-            BoundingBoxEditMode::Selected { id } => {}
-            BoundingBoxEditMode::DragPartElement { id, part } => {}
+            BoundingBoxEditMode::DragCorner {
+                id,
+                static_opposite_point,
+                ..
+            } => annoation_bboxes
+                .get_mut(*id)
+                .unwrap()
+                .set(*static_opposite_point, cursor_position),
+            BoundingBoxEditMode::DragEdge { id, part } => match *part {
+                BoundingBoxPart::EdgeLeft => {
+                    annoation_bboxes.get_mut(*id).unwrap().x_min = cursor_position.x;
+                }
+                BoundingBoxPart::EdgeRight => {
+                    annoation_bboxes.get_mut(*id).unwrap().x_max = cursor_position.x;
+                }
+                BoundingBoxPart::EdgeTop => {
+                    annoation_bboxes.get_mut(*id).unwrap().y_min = cursor_position.y;
+                }
+                BoundingBoxPart::EdgeBottom => {
+                    annoation_bboxes.get_mut(*id).unwrap().y_max = cursor_position.y;
+                }
+                _ => {}
+            },
+            BoundingBoxEditMode::DragFullBox { id, offset } => {
+                let bbox = annoation_bboxes.get_mut(*id).unwrap();
+
+                let size = bbox.size();
+
+                bbox.x_min = cursor_position.x - offset.x;
+                bbox.y_min = cursor_position.y - offset.y;
+
+                bbox.x_max = cursor_position.x - offset.x + size.0;
+                bbox.y_max = cursor_position.y - offset.y + size.1;
+            }
         }
     }
 }
@@ -311,6 +427,7 @@ pub struct OculanteState {
 
     // Image anntion stuff
     pub bbox_edit_mode: BoundingBoxEditMode,
+    pub selected_bbox_id: Option<usize>,
     pub annotation_bboxes: Vec<AnnoationBoundingBox>,
     pub current_bounding_box_element_under_cursor: Option<BoundingBoxElement>,
 }
@@ -369,6 +486,7 @@ impl Default for OculanteState {
             redraw: Default::default(),
             first_start: true,
             bbox_edit_mode: BoundingBoxEditMode::None,
+            selected_bbox_id: None,
             annotation_bboxes: vec![],
             current_bounding_box_element_under_cursor: None,
         }
