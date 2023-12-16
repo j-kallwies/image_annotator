@@ -462,7 +462,7 @@ pub struct OculanteState {
     pub redraw: bool,
     pub first_start: bool,
 
-    // Image anntion stuff
+    // Image annotation stuff
     pub bbox_edit_mode: BoundingBoxEditMode,
     pub selected_bbox_id: Option<usize>,
     pub annotation_bboxes: Vec<AnnoationBoundingBox>,
