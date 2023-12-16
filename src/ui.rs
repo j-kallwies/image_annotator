@@ -693,6 +693,17 @@ pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, gfx: &mu
             app.window().set_always_on_top(state.always_on_top);
         }
 
+        if tooltip(
+            unframed_button_colored(PLUS, state.show_crosshair_lines, ui),
+            "Show crosshair lines",
+            &lookup(&state.persistent_settings.shortcuts, &ShowCrosshairLines),
+            ui,
+        )
+        .clicked()
+        {
+            state.show_crosshair_lines = !state.show_crosshair_lines;
+        }
+
         if let Some(p) = &state.current_path {
             if tooltip(
                 unframed_button(TRASH, ui),

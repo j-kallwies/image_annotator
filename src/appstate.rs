@@ -452,6 +452,7 @@ pub struct OculanteState {
     pub persistent_settings: PersistentSettings,
     pub always_on_top: bool,
     pub network_mode: bool,
+    pub show_crosshair_lines: bool,
     /// how long the toast message appears
     pub toast_cooldown: f32,
     /// data to transform image once fullscreen is entered/left
@@ -514,6 +515,7 @@ impl Default for OculanteState {
             pointer_over_ui: Default::default(),
             persistent_settings: Default::default(),
             always_on_top: Default::default(),
+            show_crosshair_lines: true,
             network_mode: Default::default(),
             window_size: Default::default(),
             toast_cooldown: Default::default(),

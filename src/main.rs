@@ -401,6 +401,9 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                     &state.extended_info_channel,
                 );
             }
+            if key_pressed(app, state, ShowCrosshairLines) {
+                state.show_crosshair_lines = !state.show_crosshair_lines;
+            }
             #[cfg(not(target_os = "netbsd"))]
             if key_pressed(app, state, DeleteAnnoation) {
                 if let Some(id) = state.selected_bbox_id {
@@ -829,7 +832,7 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                 .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
         }
 
-        {
+        if state.show_crosshair_lines {
             let color = Color {
                 r: 0.0,
                 g: 0.0,

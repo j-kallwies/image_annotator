@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum InputEvent {
     AlwaysOnTop,
+    ShowCrosshairLines,
     Fullscreen,
     InfoMode,
     NextImage,
@@ -95,6 +96,7 @@ impl ShortcutExt for Shortcuts {
         #[allow(unused_mut)]
         let mut s = Shortcuts::default()
             .add_key(InputEvent::AlwaysOnTop, "T")
+            .add_key(InputEvent::ShowCrosshairLines, "X")
             .add_key(InputEvent::Fullscreen, "F")
             .add_key(InputEvent::ResetView, "V")
             .add_key(InputEvent::Quit, "Q")
