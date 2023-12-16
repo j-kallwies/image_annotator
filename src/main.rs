@@ -736,18 +736,6 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
 
         state.is_loaded = true;
 
-        match &state.persistent_settings.current_channel {
-            // Unpremultiply the image
-            ColorChannel::Rgb => state.current_texture = unpremult(&img).to_texture(gfx),
-            // Do nuttin'
-            ColorChannel::Rgba => (),
-            // Display the channel
-            _ => {
-                state.current_texture =
-                    solo_channel(&img, state.persistent_settings.current_channel as usize)
-                        .to_texture(gfx)
-            }
-        }
         state.current_image = Some(img);
         if state.persistent_settings.info_enabled {
             debug!("Sending extended info");

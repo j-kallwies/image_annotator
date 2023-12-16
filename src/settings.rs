@@ -1,4 +1,4 @@
-use crate::{shortcuts::*, utils::ColorChannel};
+use crate::shortcuts::*;
 use anyhow::{anyhow, Result};
 use notan::egui::{Context, Visuals};
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,6 @@ pub struct PersistentSettings {
     pub show_checker_background: bool,
     pub show_minimap: bool,
     pub show_frame: bool,
-    pub current_channel: ColorChannel,
     /// How much to scale SVG images when rendering
     pub svg_scale: f32,
     pub zen_mode: bool,
@@ -71,7 +70,6 @@ impl Default for PersistentSettings {
             show_checker_background: Default::default(),
             show_minimap: Default::default(),
             show_frame: Default::default(),
-            current_channel: ColorChannel::Rgba,
             svg_scale: 1.0,
             zen_mode: false,
             theme: ColorTheme::Dark,

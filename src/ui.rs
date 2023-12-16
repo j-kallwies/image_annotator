@@ -7,8 +7,7 @@ use crate::{
     shortcuts::{key_pressed, keypresses_as_string, lookup},
     utils::{
         clipboard_copy, disp_col, disp_col_norm, load_image_from_path, next_image, prev_image,
-        send_extended_info, set_title, solo_channel, toggle_fullscreen, unpremult, ColorChannel,
-        ImageExt,
+        send_extended_info, set_title, toggle_fullscreen,
     },
 };
 
@@ -612,49 +611,6 @@ pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, gfx: &mu
             .clicked()
         {
             browse_for_image_path(state)
-        }
-
-        let mut changed_channels = false;
-
-        if key_pressed(app, state, RedChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Red;
-            changed_channels = true;
-        }
-        if key_pressed(app, state, GreenChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Green;
-            changed_channels = true;
-        }
-        if key_pressed(app, state, BlueChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Blue;
-            changed_channels = true;
-        }
-        if key_pressed(app, state, AlphaChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Alpha;
-            changed_channels = true;
-        }
-
-        if key_pressed(app, state, RGBChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Rgb;
-            changed_channels = true;
-        }
-        if key_pressed(app, state, RGBAChannel) {
-            state.persistent_settings.current_channel = ColorChannel::Rgba;
-            changed_channels = true;
-        }
-
-        // TODO: remove redundancy
-        if changed_channels {
-            if let Some(img) = &state.current_image {
-                match &state.persistent_settings.current_channel {
-                    ColorChannel::Rgb => state.current_texture = unpremult(img).to_texture(gfx),
-                    ColorChannel::Rgba => state.current_texture = img.to_texture(gfx),
-                    _ => {
-                        state.current_texture =
-                            solo_channel(img, state.persistent_settings.current_channel as usize)
-                                .to_texture(gfx)
-                    }
-                }
-            }
         }
 
         if state.current_path.is_some() {

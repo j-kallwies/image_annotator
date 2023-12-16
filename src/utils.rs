@@ -366,29 +366,6 @@ impl Frame {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, EnumIter, Display, Clone, Copy)]
-pub enum ColorChannel {
-    Red,
-    Green,
-    Blue,
-    Alpha,
-    Rgb,
-    Rgba,
-}
-
-impl ColorChannel {
-    pub fn hotkey(&self, shortcuts: &Shortcuts) -> String {
-        match self {
-            Self::Red => lookup(shortcuts, &InputEvent::RedChannel),
-            Self::Green => lookup(shortcuts, &InputEvent::GreenChannel),
-            Self::Blue => lookup(shortcuts, &InputEvent::BlueChannel),
-            Self::Alpha => lookup(shortcuts, &InputEvent::AlphaChannel),
-            Self::Rgb => lookup(shortcuts, &InputEvent::RGBChannel),
-            Self::Rgba => lookup(shortcuts, &InputEvent::RGBAChannel),
-        }
-    }
-}
-
 pub fn zoomratio(i: f32, s: f32) -> f32 {
     i * s * 0.1
 }
@@ -452,25 +429,6 @@ pub fn is_ext_compatible(fname: &Path) -> bool {
             .to_lowercase()
             .as_str(),
     )
-}
-
-pub fn solo_channel(img: &RgbaImage, channel: usize) -> RgbaImage {
-    let mut updated_img = img.clone();
-    updated_img.par_chunks_mut(4).for_each(|pixel| {
-        pixel[0] = pixel[channel];
-        pixel[1] = pixel[channel];
-        pixel[2] = pixel[channel];
-        pixel[3] = 255;
-    });
-    updated_img
-}
-
-pub fn unpremult(img: &RgbaImage) -> RgbaImage {
-    let mut updated_img = img.clone();
-    updated_img.par_chunks_mut(4).for_each(|pixel| {
-        pixel[3] = 255;
-    });
-    updated_img
 }
 
 pub fn scale_pt(

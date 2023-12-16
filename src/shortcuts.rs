@@ -16,12 +16,6 @@ pub enum InputEvent {
     FirstImage,
     LastImage,
     PreviousImage,
-    RedChannel,
-    GreenChannel,
-    BlueChannel,
-    AlphaChannel,
-    RGBChannel,
-    RGBAChannel,
     ResetView,
     ZoomOut,
     ZoomIn,
@@ -105,12 +99,6 @@ impl ShortcutExt for Shortcuts {
             .add_key(InputEvent::ResetView, "V")
             .add_key(InputEvent::Quit, "Q")
             .add_key(InputEvent::InfoMode, "I")
-            .add_key(InputEvent::RedChannel, "R")
-            .add_key(InputEvent::GreenChannel, "G")
-            .add_key(InputEvent::BlueChannel, "B")
-            .add_key(InputEvent::AlphaChannel, "A")
-            .add_key(InputEvent::RGBChannel, "U")
-            .add_key(InputEvent::RGBAChannel, "C")
             .add_keys(InputEvent::CompareNext, &["LShift", "C"])
             .add_key(InputEvent::PreviousImage, "Left")
             .add_key(InputEvent::FirstImage, "Home")
