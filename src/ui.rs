@@ -22,7 +22,6 @@ use notan::{
 };
 use std::{collections::BTreeSet, ops::RangeInclusive};
 const PANEL_WIDTH: f32 = 240.0;
-const PANEL_WIDGET_OFFSET: f32 = 10.0;
 
 #[cfg(feature = "turbo")]
 pub trait EguiExt {
