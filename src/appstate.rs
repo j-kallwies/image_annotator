@@ -47,6 +47,7 @@ pub struct AnnoationBoundingBox {
     x_max: f32,
     y_min: f32,
     y_max: f32,
+    class_id: i32,
 }
 
 impl Default for AnnoationBoundingBox {
@@ -56,11 +57,27 @@ impl Default for AnnoationBoundingBox {
             x_max: f32::NAN,
             y_min: f32::NAN,
             y_max: f32::NAN,
+            class_id: 0,
         }
     }
 }
 
 impl AnnoationBoundingBox {
+    pub fn from_center(
+        x_center: f32,
+        y_center: f32,
+        width: f32,
+        height: f32,
+    ) -> AnnoationBoundingBox {
+        AnnoationBoundingBox {
+            x_min: x_center - width / 2.0,
+            x_max: x_center + width / 2.0,
+            y_min: y_center - height / 2.0,
+            y_max: y_center + height / 2.0,
+            class_id: 0,
+        }
+    }
+
     pub fn tl_corner(self) -> Vector2<f32> {
         nalgebra::Vector2::new(self.x_min, self.y_min)
     }
@@ -98,6 +115,17 @@ impl AnnoationBoundingBox {
 
     pub fn contains(self, p: (f32, f32)) -> bool {
         p.0 >= self.x_min && p.0 <= self.x_max && p.1 >= self.y_min && p.1 <= self.y_max
+    }
+
+    pub fn to_yolo_label_str(self, image_width: u32, image_height: u32) -> String {
+        format!(
+            "{} {} {} {} {}",
+            self.class_id,
+            self.center().x / (image_width as f32),
+            self.center().y / (image_height as f32),
+            self.size().0 / (image_width as f32),
+            self.size().1 / (image_height as f32),
+        )
     }
 
     pub fn set(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {

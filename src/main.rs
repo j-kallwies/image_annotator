@@ -15,6 +15,8 @@ use notan::egui::{self, *};
 use notan::prelude::*;
 use palette::white_point::E;
 use shortcuts::key_pressed;
+use std::ffi::OsStr;
+use std::path::Path;
 use std::borrow::BorrowMut;
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -43,6 +45,8 @@ mod ui;
 #[cfg(feature = "update")]
 mod update;
 use ui::*;
+mod yolo_labels;
+use yolo_labels::Unnormaliser;
 
 pub const FONT: &[u8; 309828] = include_bytes!("../res/fonts/Inter-Regular.ttf");
 
@@ -754,6 +758,26 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                 &state.current_path,
                 &state.extended_info_channel,
             );
+        }
+
+        // Remove all previous annotations
+        state.annotation_bboxes.clear();
+
+        // Load annotations from file, if they are available
+        let labels_filename = get_labels_filename(state);
+        if let Ok(labels) = yolo_labels::Labels::from_file(labels_filename) {
+            for label in labels.labels {
+                let label_img =
+                    label.unnormalise((state.image_dimension.0, state.image_dimension.1));
+                state
+                    .annotation_bboxes
+                    .push(AnnoationBoundingBox::from_center(
+                        label_img.x_centre,
+                        label_img.y_centre,
+                        label_img.width,
+                        label_img.height,
+                    ));
+            }
         }
     }
 

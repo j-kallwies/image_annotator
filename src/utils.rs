@@ -604,6 +604,9 @@ pub fn clipboard_copy(img: &RgbaImage) {
 }
 
 pub fn prev_image(state: &mut OculanteState) {
+    // First save the previous image annotations
+    write_annotions_to_file(state);
+
     if let Some(img_location) = state.current_path.as_mut() {
         let next_img = state.scrubber.prev();
         // prevent reload if at last or first
@@ -624,6 +627,9 @@ pub fn load_image_from_path(p: &Path, state: &mut OculanteState) {
 }
 
 pub fn last_image(state: &mut OculanteState) {
+    // First save the previous image annotations
+    write_annotions_to_file(state);
+
     if let Some(img_location) = state.current_path.as_mut() {
         let last = state.scrubber.len().saturating_sub(1);
         let next_img = state.scrubber.set(last);
@@ -639,6 +645,9 @@ pub fn last_image(state: &mut OculanteState) {
 }
 
 pub fn first_image(state: &mut OculanteState) {
+    // First save the previous image annotations
+    write_annotions_to_file(state);
+
     if let Some(img_location) = state.current_path.as_mut() {
         let next_img = state.scrubber.set(0);
         // prevent reload if at last or first
@@ -653,6 +662,9 @@ pub fn first_image(state: &mut OculanteState) {
 }
 
 pub fn next_image(state: &mut OculanteState) {
+    // First save the previous image annotations
+    write_annotions_to_file(state);
+
     if let Some(img_location) = state.current_path.as_mut() {
         let next_img = state.scrubber.next();
         // prevent reload if at last or first
@@ -738,4 +750,27 @@ pub fn toggle_zen_mode(state: &mut OculanteState, app: &mut App) {
         )));
     }
     set_title(app, state);
+}
+
+pub fn get_labels_filename(state: &OculanteState) -> PathBuf {
+    let mut labels_filename = state.current_path.clone().unwrap();
+    labels_filename.set_extension("txt");
+
+    return labels_filename;
+}
+
+pub fn write_annotions_to_file(state: &OculanteState) {
+    let labels_filename = get_labels_filename(state);
+
+    let mut string_list: Vec<String> = vec![];
+    for label in state.annotation_bboxes.clone() {
+        string_list.push(label.to_yolo_label_str(state.image_dimension.0, state.image_dimension.1));
+    }
+
+    let write_result = std::fs::write(labels_filename.clone(), string_list.join("\n"));
+
+    let _ = state.message_channel.0.send(Message::Info(format!(
+        "Annotation saved to file {}",
+        labels_filename.to_str().unwrap()
+    )));
 }
