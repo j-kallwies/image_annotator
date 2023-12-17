@@ -499,6 +499,8 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                 app.window().size(),
             );
             state.persistent_settings.save_blocking();
+
+            write_annotions_to_file(state);
         }
         Event::MouseWheel { delta_y, .. } => {
             if !state.pointer_over_ui {
