@@ -168,7 +168,7 @@ impl EguiExt for Ui {
     }
 }
 
-pub fn info_ui(ctx: &Context, state: &mut OculanteState, gfx: &mut Graphics) {
+pub fn info_ui(ctx: &Context, state: &mut OculanteState, _gfx: &mut Graphics) {
     if let Some(img) = &state.current_image {
         let img = img;
 
@@ -598,7 +598,7 @@ fn keybinding_ui(app: &mut App, state: &mut OculanteState, ui: &mut Ui) {
 //     ui.add(Button::new(format!("{:?}", k.0)).fill(Color32::DARK_BLUE));
 // }
 
-pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, gfx: &mut Graphics) {
+pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, _gfx: &mut Graphics) {
     ui.horizontal_centered(|ui| {
         use crate::shortcuts::InputEvent::*;
 

@@ -9,7 +9,6 @@ use notan::graphics::Texture;
 use notan::prelude::{App, Graphics, TextureFilter};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 
@@ -23,13 +22,11 @@ use image::{self};
 use image::{EncodableLayout, Rgba, RgbaImage};
 use std::sync::mpsc::{self};
 use std::sync::mpsc::{Receiver, Sender};
-use strum::Display;
-use strum_macros::EnumIter;
 
-use crate::appstate::{ImageGeometry, Message, OculanteState};
+use crate::appstate::{Message, OculanteState};
 use crate::cache::Cache;
 use crate::image_loader::open_image;
-use crate::shortcuts::{lookup, InputEvent, Shortcuts};
+use crate::shortcuts::{lookup, InputEvent};
 
 pub const SUPPORTED_EXTENSIONS: &[&str] = &[
     "bmp",
@@ -667,32 +664,6 @@ pub fn set_title(app: &mut App, state: &mut OculanteState) {
     }
 
     app.window().set_title(&title_string);
-}
-
-pub fn compare_next(state: &mut OculanteState) {
-    if let Some(p) = &(state.current_path).clone() {
-        let mut compare_list: Vec<(PathBuf, ImageGeometry)> =
-            state.compare_list.clone().into_iter().collect();
-        compare_list.sort_by(|a, b| a.0.cmp(&b.0));
-
-        let index = compare_list.iter().position(|x| &x.0 == p).unwrap_or(0);
-        let index = if index + 1 < compare_list.len() {
-            index + 1
-        } else {
-            0
-        };
-
-        if let Some(c) = compare_list.get(index) {
-            let path = &c.0;
-            let geo = &c.1;
-            state.image_geometry = geo.clone();
-            state.is_loaded = false;
-            state.current_image = None;
-            state.player.load(path, state.message_channel.0.clone());
-            state.current_path = Some(path.clone());
-            state.persistent_settings.keep_view = true;
-        }
-    }
 }
 
 pub fn fit(oldvalue: f32, oldmin: f32, oldmax: f32, newmin: f32, newmax: f32) -> f32 {
