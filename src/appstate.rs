@@ -43,20 +43,20 @@ impl Message {
 
 #[derive(Clone, Copy, Debug)]
 pub struct AnnoationBoundingBox {
-    x_min: f32,
-    x_max: f32,
-    y_min: f32,
-    y_max: f32,
+    x_center: f32,
+    y_center: f32,
+    width: f32,
+    height: f32,
     pub class_id: u32,
 }
 
 impl Default for AnnoationBoundingBox {
     fn default() -> AnnoationBoundingBox {
         AnnoationBoundingBox {
-            x_min: f32::NAN,
-            x_max: f32::NAN,
-            y_min: f32::NAN,
-            y_max: f32::NAN,
+            x_center: f32::NAN,
+            y_center: f32::NAN,
+            width: f32::NAN,
+            height: f32::NAN,
             class_id: 0,
         }
     }
@@ -71,51 +71,78 @@ impl AnnoationBoundingBox {
         class_id: u32,
     ) -> AnnoationBoundingBox {
         AnnoationBoundingBox {
-            x_min: x_center - width / 2.0,
-            x_max: x_center + width / 2.0,
-            y_min: y_center - height / 2.0,
-            y_max: y_center + height / 2.0,
+            x_center: x_center,
+            y_center: y_center,
+            width: width,
+            height: height,
             class_id: class_id,
         }
     }
 
+    pub fn x_min(self) -> f32 {
+        self.x_center - self.width / 2.0
+    }
+
+    pub fn x_max(self) -> f32 {
+        self.x_center + self.width / 2.0
+    }
+
+    pub fn y_min(self) -> f32 {
+        self.y_center - self.height / 2.0
+    }
+
+    pub fn y_max(self) -> f32 {
+        self.y_center + self.height / 2.0
+    }
+
     pub fn tl_corner(self) -> Vector2<f32> {
-        nalgebra::Vector2::new(self.x_min, self.y_min)
-    }
-
-    pub fn tr_corner(self) -> Vector2<f32> {
-        nalgebra::Vector2::new(self.x_max, self.y_min)
-    }
-
-    pub fn lr_corner(self) -> Vector2<f32> {
-        nalgebra::Vector2::new(self.x_max, self.y_max)
-    }
-
-    pub fn ll_corner(self) -> Vector2<f32> {
-        nalgebra::Vector2::new(self.x_min, self.y_max)
-    }
-
-    pub fn center(self) -> Vector2<f32> {
         nalgebra::Vector2::new(
-            (self.x_min + self.x_max) / 2.0,
-            (self.y_min + self.y_max) / 2.0,
+            self.x_center - self.width / 2.0,
+            self.y_center - self.height / 2.0,
         )
     }
 
+    pub fn tr_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(
+            self.x_center + self.width / 2.0,
+            self.y_center - self.height / 2.0,
+        )
+    }
+
+    pub fn br_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(
+            self.x_center + self.width / 2.0,
+            self.y_center + self.height / 2.0,
+        )
+    }
+
+    pub fn bl_corner(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(
+            self.x_center - self.width / 2.0,
+            self.y_center + self.height / 2.0,
+        )
+    }
+
+    pub fn center(self) -> Vector2<f32> {
+        nalgebra::Vector2::new(self.x_center, self.y_center)
+    }
+
     pub fn width(self) -> f32 {
-        self.x_max - self.x_min
+        self.width
     }
 
     pub fn height(self) -> f32 {
-        self.y_max - self.y_min
+        self.height
     }
 
     pub fn size(self) -> (f32, f32) {
-        (self.x_max - self.x_min, self.y_max - self.y_min)
+        (self.width, self.height)
     }
 
     pub fn contains(self, p: (f32, f32)) -> bool {
-        p.0 >= self.x_min && p.0 <= self.x_max && p.1 >= self.y_min && p.1 <= self.y_max
+        let dx = p.0 - self.x_center;
+        let dy = p.1 - self.y_center;
+        dx.abs() <= self.width / 2.0 && dy.abs() <= self.height / 2.0
     }
 
     pub fn to_yolo_label_str(self, image_width: u32, image_height: u32) -> String {
@@ -129,47 +156,76 @@ impl AnnoationBoundingBox {
         )
     }
 
-    pub fn set(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {
-        self.x_min = f32::min(p1.x, p2.x);
-        self.x_max = f32::max(p1.x, p2.x);
-        self.y_min = f32::min(p1.y, p2.y);
-        self.y_max = f32::max(p1.y, p2.y);
+    pub fn set_corner_points(self: &mut Self, p1: Vector2<f32>, p2: Vector2<f32>) {
+        self.x_center = (p1.x + p2.x) / 2.0;
+        self.y_center = (p1.y + p2.y) / 2.0;
+        self.width = (p1.x - p2.x).abs();
+        self.height = (p1.y - p2.y).abs();
+    }
+
+    pub fn set_center(self: &mut Self, p_center: Vector2<f32>) {
+        self.x_center = p_center.x;
+        self.y_center = p_center.y;
+    }
+
+    pub fn set_x_min(self: &mut Self, x_min: f32) {
+        let x_max = self.x_max();
+        self.width = (x_max - x_min).abs();
+        self.x_center = (x_max + x_min) / 2.0;
+    }
+
+    pub fn set_x_max(self: &mut Self, x_max: f32) {
+        let x_min = self.x_min();
+        self.width = (x_max - x_min).abs();
+        self.x_center = (x_max + x_min) / 2.0;
+    }
+
+    pub fn set_y_min(self: &mut Self, y_min: f32) {
+        let y_max = self.y_max();
+        self.height = (y_max - y_min).abs();
+        self.y_center = (y_max + y_min) / 2.0;
+    }
+
+    pub fn set_y_max(self: &mut Self, y_max: f32) {
+        let y_min = self.y_min();
+        self.height = (y_max - y_min).abs();
+        self.y_center = (y_max + y_min) / 2.0;
     }
 
     fn get_part(self: &Self, cursor_position: Vector2<f32>) -> Option<BoundingBoxPart> {
         let catch_radius = 20.0;
-        if cursor_position.x >= self.x_min
-            && cursor_position.y >= self.y_min
-            && cursor_position.x <= self.x_max
-            && cursor_position.y <= self.y_max
+        if cursor_position.x >= self.x_min()
+            && cursor_position.y >= self.y_min()
+            && cursor_position.x <= self.x_max()
+            && cursor_position.y <= self.y_max()
         {
             Some(BoundingBoxPart::CentralArea)
         } else if (self.tl_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerUpperLeft)
         } else if (self.tr_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerUpperRight)
-        } else if (self.ll_corner() - cursor_position).norm() < catch_radius {
+        } else if (self.bl_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerLowerLeft)
-        } else if (self.lr_corner() - cursor_position).norm() < catch_radius {
+        } else if (self.br_corner() - cursor_position).norm() < catch_radius {
             Some(BoundingBoxPart::CornerLowerRight)
-        } else if (self.x_min - cursor_position.x).abs() < catch_radius / 2.
-            && cursor_position.y >= self.y_min
-            && cursor_position.y <= self.y_max
+        } else if (self.x_min() - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min()
+            && cursor_position.y <= self.y_max()
         {
             Some(BoundingBoxPart::EdgeLeft)
-        } else if (self.x_max - cursor_position.x).abs() < catch_radius / 2.
-            && cursor_position.y >= self.y_min
-            && cursor_position.y <= self.y_max
+        } else if (self.x_max() - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min()
+            && cursor_position.y <= self.y_max()
         {
             Some(BoundingBoxPart::EdgeRight)
-        } else if (self.y_min - cursor_position.y).abs() < catch_radius / 2.
-            && cursor_position.x >= self.x_min
-            && cursor_position.x <= self.x_max
+        } else if (self.y_min() - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min()
+            && cursor_position.x <= self.x_max()
         {
             Some(BoundingBoxPart::EdgeTop)
-        } else if (self.y_max - cursor_position.y).abs() < catch_radius / 2.
-            && cursor_position.x >= self.x_min
-            && cursor_position.x <= self.x_max
+        } else if (self.y_max() - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min()
+            && cursor_position.x <= self.x_max()
         {
             Some(BoundingBoxPart::EdgeBottom)
         } else {
@@ -254,7 +310,7 @@ impl BoundingBoxEditMode {
                             *self = BoundingBoxEditMode::DragFullBox {
                                 id: clicked_part_element.id,
                                 offset: cursor_position
-                                    - annoation_bboxes[clicked_part_element.id].tl_corner(),
+                                    - annoation_bboxes[clicked_part_element.id].center(),
                             };
                             *selected_bbox_id = Some(clicked_part_element.id);
                             return;
@@ -264,7 +320,7 @@ impl BoundingBoxEditMode {
                                 id: clicked_part_element.id,
                                 part: clicked_part_element.part,
                                 static_opposite_point: annoation_bboxes[clicked_part_element.id]
-                                    .lr_corner(),
+                                    .br_corner(),
                             };
                             return;
                         }
@@ -273,7 +329,7 @@ impl BoundingBoxEditMode {
                                 id: clicked_part_element.id,
                                 part: clicked_part_element.part,
                                 static_opposite_point: annoation_bboxes[clicked_part_element.id]
-                                    .ll_corner(),
+                                    .bl_corner(),
                             };
                             return;
                         }
@@ -321,7 +377,7 @@ impl BoundingBoxEditMode {
                     if start_point.is_none() {
                         *start_point = Some(cursor_position);
                     } else {
-                        bbox.set(start_point.unwrap(), cursor_position);
+                        bbox.set_corner_points(start_point.unwrap(), cursor_position);
                     }
                 }
             }
@@ -376,7 +432,7 @@ impl BoundingBoxEditMode {
             BoundingBoxEditMode::New { id, start_point } => {
                 if let Some(bbox) = annoation_bboxes.get_mut(*id) {
                     if start_point.is_some() {
-                        bbox.set(start_point.unwrap(), cursor_position);
+                        bbox.set_corner_points(start_point.unwrap(), cursor_position);
                     }
                 }
             }
@@ -387,32 +443,41 @@ impl BoundingBoxEditMode {
             } => annoation_bboxes
                 .get_mut(*id)
                 .unwrap()
-                .set(*static_opposite_point, cursor_position),
+                .set_corner_points(*static_opposite_point, cursor_position),
             BoundingBoxEditMode::DragEdge { id, part } => match *part {
                 BoundingBoxPart::EdgeLeft => {
-                    annoation_bboxes.get_mut(*id).unwrap().x_min = cursor_position.x;
+                    annoation_bboxes
+                        .get_mut(*id)
+                        .unwrap()
+                        .set_x_min(cursor_position.x);
                 }
                 BoundingBoxPart::EdgeRight => {
-                    annoation_bboxes.get_mut(*id).unwrap().x_max = cursor_position.x;
+                    annoation_bboxes
+                        .get_mut(*id)
+                        .unwrap()
+                        .set_x_max(cursor_position.x);
                 }
                 BoundingBoxPart::EdgeTop => {
-                    annoation_bboxes.get_mut(*id).unwrap().y_min = cursor_position.y;
+                    annoation_bboxes
+                        .get_mut(*id)
+                        .unwrap()
+                        .set_y_min(cursor_position.y);
                 }
                 BoundingBoxPart::EdgeBottom => {
-                    annoation_bboxes.get_mut(*id).unwrap().y_max = cursor_position.y;
+                    annoation_bboxes
+                        .get_mut(*id)
+                        .unwrap()
+                        .set_y_max(cursor_position.y);
                 }
                 _ => {}
             },
             BoundingBoxEditMode::DragFullBox { id, offset } => {
                 let bbox = annoation_bboxes.get_mut(*id).unwrap();
 
-                let size = bbox.size();
-
-                bbox.x_min = cursor_position.x - offset.x;
-                bbox.y_min = cursor_position.y - offset.y;
-
-                bbox.x_max = cursor_position.x - offset.x + size.0;
-                bbox.y_max = cursor_position.y - offset.y + size.1;
+                bbox.set_center(nalgebra::Vector2::new(
+                    cursor_position.x - offset.x,
+                    cursor_position.y - offset.y,
+                ));
             }
         }
     }
