@@ -710,6 +710,14 @@ pub fn toggle_zen_mode(state: &mut OculanteState, app: &mut App) {
     set_title(app, state);
 }
 
+pub fn set_label_class(state: &mut OculanteState, class_id: u32) {
+    state.current_label_class = class_id;
+
+    if let Some(seletected_bbox_id) = state.selected_bbox_id {
+        state.annotation_bboxes[seletected_bbox_id].class_id = class_id;
+    }
+}
+
 pub fn get_labels_filename(state: &OculanteState) -> PathBuf {
     let mut labels_filename = state.current_path.clone().unwrap();
     labels_filename.set_extension("txt");

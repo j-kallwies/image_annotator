@@ -5,6 +5,7 @@ use crate::{
 };
 use image::RgbaImage;
 use nalgebra::Vector2;
+use notan::graphics::color::Color;
 use notan::{egui::epaint::ahash::HashMap, prelude::Texture, AppState};
 use std::{
     path::PathBuf,
@@ -46,7 +47,7 @@ pub struct AnnoationBoundingBox {
     x_max: f32,
     y_min: f32,
     y_max: f32,
-    class_id: i32,
+    pub class_id: u32,
 }
 
 impl Default for AnnoationBoundingBox {
@@ -67,13 +68,14 @@ impl AnnoationBoundingBox {
         y_center: f32,
         width: f32,
         height: f32,
+        class_id: u32,
     ) -> AnnoationBoundingBox {
         AnnoationBoundingBox {
             x_min: x_center - width / 2.0,
             x_max: x_center + width / 2.0,
             y_min: y_center - height / 2.0,
             y_max: y_center + height / 2.0,
-            class_id: 0,
+            class_id: class_id,
         }
     }
 
@@ -239,6 +241,7 @@ impl BoundingBoxEditMode {
         cursor_position: Vector2<f32>,
         annoation_bboxes: &mut Vec<AnnoationBoundingBox>,
         selected_bbox_id: &mut Option<usize>,
+        label_class_id: u32,
     ) {
         *selected_bbox_id = None;
         match self {
@@ -307,6 +310,7 @@ impl BoundingBoxEditMode {
 
                 // Create new BoundingBox
                 annoation_bboxes.push(AnnoationBoundingBox::default());
+                annoation_bboxes.last_mut().unwrap().class_id = label_class_id;
                 *self = BoundingBoxEditMode::New {
                     id: annoation_bboxes.len() - 1,
                     start_point: Some(cursor_position),
@@ -467,6 +471,8 @@ pub struct OculanteState {
     pub selected_bbox_id: Option<usize>,
     pub annotation_bboxes: Vec<AnnoationBoundingBox>,
     pub current_bounding_box_element_under_cursor: Option<BoundingBoxElement>,
+    pub current_label_class: u32,
+    pub label_colors: Vec<Color>,
 }
 
 impl OculanteState {
@@ -527,6 +533,69 @@ impl Default for OculanteState {
             selected_bbox_id: None,
             annotation_bboxes: vec![],
             current_bounding_box_element_under_cursor: None,
+            current_label_class: 0,
+            label_colors: vec![
+                Color {
+                    r: 0.894,
+                    g: 0.102,
+                    b: 0.110,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.216,
+                    g: 0.494,
+                    b: 0.722,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.302,
+                    g: 0.686,
+                    b: 0.290,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.596,
+                    g: 0.306,
+                    b: 0.639,
+                    a: 1.0,
+                },
+                Color {
+                    r: 1.00,
+                    g: 0.498,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.651,
+                    g: 0.337,
+                    b: 0.157,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.969,
+                    g: 0.506,
+                    b: 0.749,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.60,
+                    g: 0.60,
+                    b: 0.60,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.40,
+                    g: 0.761,
+                    b: 0.647,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+            ],
         }
     }
 }

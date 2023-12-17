@@ -14,8 +14,6 @@ use notan::egui::CursorIcon;
 use notan::egui::{self, *};
 use notan::prelude::*;
 use shortcuts::key_pressed;
-use std::ffi::OsStr;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc;
 pub mod cache;
@@ -340,29 +338,38 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                 state.image_geometry.offset.y += delta;
                 limit_offset(app, state);
             }
-            if key_pressed(app, state, CompareNext) {
-                compare_next(state);
-            }
             if key_pressed(app, state, ResetView) {
                 state.reset_image = true
             }
             if key_pressed(app, state, ZenMode) {
                 toggle_zen_mode(state, app);
             }
-            if key_pressed(app, state, ZoomActualSize) {
-                set_zoom(1.0, None, state);
+            if key_pressed(app, state, Label1) {
+                set_label_class(state, 0);
             }
-            if key_pressed(app, state, ZoomDouble) {
-                set_zoom(2.0, None, state);
+            if key_pressed(app, state, Label2) {
+                set_label_class(state, 1);
             }
-            if key_pressed(app, state, ZoomThree) {
-                set_zoom(3.0, None, state);
+            if key_pressed(app, state, Label3) {
+                set_label_class(state, 2);
             }
-            if key_pressed(app, state, ZoomFour) {
-                set_zoom(4.0, None, state);
+            if key_pressed(app, state, Label4) {
+                set_label_class(state, 3);
             }
-            if key_pressed(app, state, ZoomFive) {
-                set_zoom(5.0, None, state);
+            if key_pressed(app, state, Label5) {
+                set_label_class(state, 4);
+            }
+            if key_pressed(app, state, Label6) {
+                set_label_class(state, 5);
+            }
+            if key_pressed(app, state, Label7) {
+                set_label_class(state, 6);
+            }
+            if key_pressed(app, state, Label8) {
+                set_label_class(state, 7);
+            }
+            if key_pressed(app, state, Label9) {
+                set_label_class(state, 8);
             }
             if key_pressed(app, state, Quit) {
                 state.persistent_settings.save_blocking();
@@ -552,6 +559,7 @@ fn event(app: &mut App, state: &mut OculanteState, evt: Event) {
                         state.cursor_relative,
                         &mut state.annotation_bboxes,
                         &mut state.selected_bbox_id,
+                        state.current_label_class,
                     );
                 }
             }
@@ -765,6 +773,7 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                         label_img.y_centre,
                         label_img.width,
                         label_img.height,
+                        label_img.label_index as u32,
                     ));
             }
         }
@@ -870,48 +879,31 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                     Some(selected_bbox_id)
                 });
 
-                let line_color = Color {
-                    r: 0.0,
-                    g: 1.0,
-                    b: 0.0,
-                    a: 0.75,
-                };
-                let line_width = 3.0;
+                let line_color = state.label_colors[bbox.class_id as usize];
+                let mut fill_color = line_color;
 
                 if fill {
-                    draw.rect(
-                        vector_to_tuple(
-                            bbox.tl_corner()
-                                - nalgebra::Vector2::new(line_width / 2.0, line_width / 2.0),
-                        ),
-                        (bbox.width() + line_width, bbox.height() + line_width),
-                    )
-                    .stroke(line_width)
-                    .color(line_color)
-                    .blend_mode(BlendMode::NORMAL)
-                    .scale(state.image_geometry.scale, state.image_geometry.scale)
-                    .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
-                    .fill_color(Color {
-                        r: 0.0,
-                        g: 1.0,
-                        b: 0.0,
-                        a: 0.2,
-                    })
-                    .fill();
+                    fill_color.a = 0.25;
                 } else {
-                    draw.rect(
-                        vector_to_tuple(
-                            bbox.tl_corner()
-                                - nalgebra::Vector2::new(line_width / 2.0, line_width / 2.0),
-                        ),
-                        (bbox.width() + line_width, bbox.height() + line_width),
-                    )
-                    .stroke(line_width)
-                    .color(line_color)
-                    .blend_mode(BlendMode::NORMAL)
-                    .scale(state.image_geometry.scale, state.image_geometry.scale)
-                    .translate(state.image_geometry.offset.x, state.image_geometry.offset.y);
+                    fill_color.a = 0.0;
                 }
+
+                let line_width = 3.0;
+
+                draw.rect(
+                    vector_to_tuple(
+                        bbox.tl_corner()
+                            - nalgebra::Vector2::new(line_width / 2.0, line_width / 2.0),
+                    ),
+                    (bbox.width() + line_width, bbox.height() + line_width),
+                )
+                .stroke(line_width)
+                .color(line_color)
+                .blend_mode(BlendMode::NORMAL)
+                .scale(state.image_geometry.scale, state.image_geometry.scale)
+                .translate(state.image_geometry.offset.x, state.image_geometry.offset.y)
+                .fill_color(fill_color)
+                .fill();
             }
         }
 

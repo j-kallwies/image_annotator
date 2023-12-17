@@ -20,12 +20,15 @@ pub enum InputEvent {
     ResetView,
     ZoomOut,
     ZoomIn,
-    ZoomActualSize,
-    ZoomDouble,
-    ZoomThree,
-    ZoomFour,
-    ZoomFive,
-    CompareNext,
+    Label1,
+    Label2,
+    Label3,
+    Label4,
+    Label5,
+    Label6,
+    Label7,
+    Label8,
+    Label9,
     PanLeft,
     PanRight,
     PanUp,
@@ -101,18 +104,21 @@ impl ShortcutExt for Shortcuts {
             .add_key(InputEvent::ResetView, "V")
             .add_key(InputEvent::Quit, "Q")
             .add_key(InputEvent::InfoMode, "I")
-            .add_keys(InputEvent::CompareNext, &["LShift", "C"])
             .add_key(InputEvent::PreviousImage, "Left")
             .add_key(InputEvent::FirstImage, "Home")
             .add_key(InputEvent::LastImage, "End")
             .add_key(InputEvent::NextImage, "Right")
-            .add_key(InputEvent::ZoomIn, "Equals")
+            .add_key(InputEvent::ZoomIn, "Plus")
             .add_key(InputEvent::ZoomOut, "Minus")
-            .add_key(InputEvent::ZoomActualSize, "Key1")
-            .add_key(InputEvent::ZoomDouble, "Key2")
-            .add_key(InputEvent::ZoomThree, "Key3")
-            .add_key(InputEvent::ZoomFour, "Key4")
-            .add_key(InputEvent::ZoomFive, "Key5")
+            .add_key(InputEvent::Label1, "Key1")
+            .add_key(InputEvent::Label2, "Key2")
+            .add_key(InputEvent::Label3, "Key3")
+            .add_key(InputEvent::Label4, "Key4")
+            .add_key(InputEvent::Label5, "Key5")
+            .add_key(InputEvent::Label6, "Key6")
+            .add_key(InputEvent::Label7, "Key7")
+            .add_key(InputEvent::Label8, "Key8")
+            .add_key(InputEvent::Label9, "Key9")
             .add_key(InputEvent::ZenMode, "Z")
             .add_key(InputEvent::DeleteAnnoation, "Delete")
             // .add_key(InputEvent::Browse, "F1") // FIXME: As Shortcuts is a HashMap, only the newer key-sequence will be registered
