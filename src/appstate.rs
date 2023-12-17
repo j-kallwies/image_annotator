@@ -4,7 +4,6 @@ use crate::{
     utils::{ExtendedImageInfo, Frame, Player},
 };
 use image::RgbaImage;
-use lexical_sort::iter;
 use nalgebra::Vector2;
 use notan::{egui::epaint::ahash::HashMap, prelude::Texture, AppState};
 use std::{

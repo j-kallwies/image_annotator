@@ -703,7 +703,7 @@ pub fn main_menu(ui: &mut Ui, state: &mut OculanteState, app: &mut App, gfx: &mu
             state.show_crosshair_lines = !state.show_crosshair_lines;
         }
 
-        if let Some(p) = &state.current_path {
+        if state.current_path.is_some() {
             if tooltip(
                 unframed_button(TRASH, ui),
                 "Remove the selected annation",
