@@ -890,7 +890,7 @@ fn drawe(app: &mut App, gfx: &mut Graphics, plugins: &mut Plugins, state: &mut O
                     fill_color.a = 0.0;
                 }
 
-                let line_width = 3.0 / state.image_geometry.scale;
+                let line_width = f32::max(0.5, 3.0 / state.image_geometry.scale);
 
                 draw.rect(
                     vector_to_tuple(
