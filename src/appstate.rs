@@ -194,43 +194,84 @@ impl AnnoationBoundingBox {
 
     fn get_part(self: &Self, cursor_position: Vector2<f32>) -> Option<BoundingBoxPart> {
         let catch_radius = 20.0;
+
+        let mut current_best_dist = f32::INFINITY;
+        let mut current_best_part = None;
+
         if cursor_position.x >= self.x_min()
             && cursor_position.y >= self.y_min()
             && cursor_position.x <= self.x_max()
             && cursor_position.y <= self.y_max()
         {
-            Some(BoundingBoxPart::CentralArea)
-        } else if (self.tl_corner() - cursor_position).norm() < catch_radius {
-            Some(BoundingBoxPart::CornerUpperLeft)
-        } else if (self.tr_corner() - cursor_position).norm() < catch_radius {
-            Some(BoundingBoxPart::CornerUpperRight)
-        } else if (self.bl_corner() - cursor_position).norm() < catch_radius {
-            Some(BoundingBoxPart::CornerLowerLeft)
-        } else if (self.br_corner() - cursor_position).norm() < catch_radius {
-            Some(BoundingBoxPart::CornerLowerRight)
-        } else if (self.x_min() - cursor_position.x).abs() < catch_radius / 2.
-            && cursor_position.y >= self.y_min()
-            && cursor_position.y <= self.y_max()
-        {
-            Some(BoundingBoxPart::EdgeLeft)
-        } else if (self.x_max() - cursor_position.x).abs() < catch_radius / 2.
-            && cursor_position.y >= self.y_min()
-            && cursor_position.y <= self.y_max()
-        {
-            Some(BoundingBoxPart::EdgeRight)
-        } else if (self.y_min() - cursor_position.y).abs() < catch_radius / 2.
-            && cursor_position.x >= self.x_min()
-            && cursor_position.x <= self.x_max()
-        {
-            Some(BoundingBoxPart::EdgeTop)
-        } else if (self.y_max() - cursor_position.y).abs() < catch_radius / 2.
-            && cursor_position.x >= self.x_min()
-            && cursor_position.x <= self.x_max()
-        {
-            Some(BoundingBoxPart::EdgeBottom)
-        } else {
-            None
+            current_best_part = Some(BoundingBoxPart::CentralArea);
+            current_best_dist = 0.0;
         }
+        
+        let dist = (self.tl_corner() - cursor_position).norm();
+        if dist < catch_radius && dist < current_best_dist {
+            current_best_part = Some(BoundingBoxPart::CornerUpperLeft);
+            current_best_dist = dist;
+        }
+        
+        let dist = (self.tr_corner() - cursor_position).norm();
+        if dist < catch_radius && dist < current_best_dist {
+            current_best_part = Some(BoundingBoxPart::CornerUpperRight);
+            current_best_dist = dist;
+        }
+        
+        let dist = (self.bl_corner() - cursor_position).norm();
+        if dist < catch_radius && dist < current_best_dist {
+            current_best_part = Some(BoundingBoxPart::CornerLowerLeft);
+            current_best_dist = dist;
+        } 
+        
+        let dist = (self.br_corner() - cursor_position).norm();
+        if dist < catch_radius && dist < current_best_dist {
+            current_best_part = Some(BoundingBoxPart::CornerLowerRight);
+            current_best_dist = dist;
+        }
+        
+        let dist = (((self.tl_corner() + self.bl_corner())/2.) - cursor_position).norm();
+        if (self.x_min() - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min()
+            && cursor_position.y <= self.y_max()
+            && dist < current_best_dist
+        {
+            current_best_part = Some(BoundingBoxPart::EdgeLeft);
+            current_best_dist = dist;
+        }
+        
+        let dist = (((self.tr_corner() + self.br_corner())/2.) - cursor_position).norm();
+        if (self.x_max() - cursor_position.x).abs() < catch_radius / 2.
+            && cursor_position.y >= self.y_min()
+            && cursor_position.y <= self.y_max()
+            && dist < current_best_dist
+        {
+            current_best_part = Some(BoundingBoxPart::EdgeRight);
+            current_best_dist = dist;
+        }
+        
+        let dist = (((self.tl_corner() + self.tr_corner())/2.) - cursor_position).norm();
+        if (self.y_min() - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min()
+            && cursor_position.x <= self.x_max()
+            && dist < current_best_dist
+        {
+            current_best_part = Some(BoundingBoxPart::EdgeTop);
+            current_best_dist = dist;
+        }
+        
+        let dist = (((self.bl_corner() + self.br_corner())/2.) - cursor_position).norm();
+        if (self.y_max() - cursor_position.y).abs() < catch_radius / 2.
+            && cursor_position.x >= self.x_min()
+            && cursor_position.x <= self.x_max()
+            && dist < current_best_dist
+        {
+            current_best_part = Some(BoundingBoxPart::EdgeBottom);
+            current_best_dist = dist;
+        }
+
+        return current_best_part;
     }
 }
 
